@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🔥 Hệ thống Phát hiện Cháy Sớm</title>
+  <style>
+    /* ── Reset & Base ─────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-primary:   #0d0d0d;
+      --bg-secondary: #1a1a1a;
+      --bg-card:      #242424;
+      --accent-fire:  #ff4d00;
+      --accent-smoke: #a0a0a0;
+      --accent-glow:  #ff6a00;
+      --text-primary: #f0f0f0;
+      --text-muted:   #888;
+      --border:       #333;
+      --success:      #22c55e;
+      --radius:       10px;
+      --transition:   0.25s ease;
+    }
+
+    body {
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* ── Header ───────────────────────────────────────────────────── */
+    header {
+      width: 100%;
+      background: linear-gradient(135deg, #1a0500 0%, #2a0800 50%, #1a0500 100%);
+      border-bottom: 2px solid var(--accent-fire);
+      padding: 20px 32px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      box-shadow: 0 4px 24px rgba(255, 77, 0, 0.3);
+    }
+
+    header h1 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      color: var(--text-primary);
+    }
+
+    header h1 span { color: var(--accent-fire); }
+
+    .badge {
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 999px;
+      background: rgba(255,77,0,0.2);
+      border: 1px solid var(--accent-fire);
+      color: var(--accent-fire);
+      letter-spacing: 0.5px;
+    }
+
+    /* ── Main Layout ──────────────────────────────────────────────── */
+    main {
+      width: 100%;
+      max-width: 960px;
+      padding: 32px 16px 64px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      transition: border-color var(--transition);
+    }
+
+    .card:hover { border-color: #444; }
+
+    .card-title {
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+    }
+
+    /* ── Drop Zone ────────────────────────────────────────────────── */
+    #drop-zone {
+      border: 2px dashed #444;
+      border-radius: var(--radius);
+      padding: 48px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color var(--transition), background var(--transition);
+      position: relative;
+    }
+
+    #drop-zone.dragover {
+      border-color: var(--accent-fire);
+      background: rgba(255,77,0,0.06);
+    }
+
+    #drop-zone .icon { font-size: 3rem; display: block; margin-bottom: 12px; }
+
+    #drop-zone p {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      line-height: 1.6;
+    }
+
+    #drop-zone strong { color: var(--text-primary); }
+
+    #file-input { display: none; }
+
+    #file-name {
+      margin-top: 10px;
+      font-size: 0.82rem;
+      color: var(--accent-fire);
+      min-height: 18px;
+    }
+
+    /* ── Preview ──────────────────────────────────────────────────── */
+    #preview-wrapper {
+      display: none;
+      position: relative;
+      width: 100%;
+      max-height: 420px;
+      overflow: hidden;
+      border-radius: 8px;
+      background: #111;
+      margin-top: 16px;
+    }
+
+    #preview-canvas {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    /* ── Controls ─────────────────────────────────────────────────── */
+    .controls {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .toggle-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      user-select: none;
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      transition: color var(--transition);
+    }
+
+    .toggle-label:hover { color: var(--text-primary); }
+
+    .toggle-label input[type="checkbox"] { display: none; }
+
+    .toggle-switch {
+      width: 38px;
+      height: 22px;
+      background: #333;
+      border-radius: 999px;
+      position: relative;
+      transition: background var(--transition);
+    }
+
+    .toggle-switch::after {
+      content: '';
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      background: #fff;
+      border-radius: 50%;
+      top: 3px;
+      left: 3px;
+      transition: transform var(--transition);
+    }
+
+    .toggle-label input:checked + .toggle-switch { background: var(--accent-fire); }
+    .toggle-label input:checked + .toggle-switch::after { transform: translateX(16px); }
+
+    /* ── Button ───────────────────────────────────────────────────── */
+    #analyze-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 28px;
+      background: var(--accent-fire);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+      letter-spacing: 0.3px;
+      transition: background var(--transition), box-shadow var(--transition), opacity var(--transition);
+      box-shadow: 0 4px 16px rgba(255,77,0,0.4);
+    }
+
+    #analyze-btn:hover:not(:disabled) {
+      background: var(--accent-glow);
+      box-shadow: 0 6px 24px rgba(255,106,0,0.6);
+    }
+
+    #analyze-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    #analyze-btn .spinner {
+      display: none;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+
+    #analyze-btn.loading .spinner { display: block; }
+    #analyze-btn.loading .btn-text { display: none; }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Alert Banner ─────────────────────────────────────────────── */
+    #alert-banner {
+      display: none;
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      font-weight: 600;
+      font-size: 1rem;
+      text-align: center;
+      animation: flash 0.8s ease-in-out infinite alternate;
+    }
+
+    #alert-banner.fire {
+      display: block;
+      background: rgba(255, 40, 0, 0.15);
+      border: 2px solid #ff2800;
+      color: #ff6060;
+    }
+
+    #alert-banner.smoke {
+      display: block;
+      background: rgba(160,160,160,0.12);
+      border: 2px solid #aaa;
+      color: #ccc;
+      animation: none;
+    }
+
+    #alert-banner.safe {
+      display: block;
+      background: rgba(34,197,94,0.1);
+      border: 2px solid var(--success);
+      color: var(--success);
+      animation: none;
+    }
+
+    @keyframes flash {
+      from { border-color: #ff2800; box-shadow: 0 0 8px rgba(255,40,0,0.3); }
+      to   { border-color: #ff8000; box-shadow: 0 0 24px rgba(255,100,0,0.6); }
+    }
+
+    /* ── Results ──────────────────────────────────────────────────── */
+    #results-section { display: none; }
+
+    #results-meta {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+
+    .meta-chip {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 2px;
+    }
+
+    .meta-chip .label {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--text-muted);
+    }
+
+    .meta-chip .value {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .meta-chip .value.fire-color { color: var(--accent-fire); }
+    .meta-chip .value.smoke-color { color: var(--accent-smoke); }
+
+    /* Detection table */
+    #det-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.875rem;
+    }
+
+    #det-table th {
+      text-align: left;
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 0.5px;
+    }
+
+    #det-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid #1e1e1e;
+    }
+
+    #det-table tr:last-child td { border-bottom: none; }
+
+    .class-pill {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+
+    .class-pill.fire {
+      background: rgba(255,77,0,0.18);
+      color: var(--accent-fire);
+      border: 1px solid rgba(255,77,0,0.4);
+    }
+
+    .class-pill.smoke {
+      background: rgba(160,160,160,0.15);
+      color: #ccc;
+      border: 1px solid rgba(160,160,160,0.3);
+    }
+
+    .conf-bar-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .conf-bar {
+      height: 6px;
+      border-radius: 999px;
+      background: var(--border);
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .conf-fill { height: 100%; border-radius: 999px; }
+    .conf-fill.fire { background: linear-gradient(90deg, #ff4d00, #ffae00); }
+    .conf-fill.smoke { background: linear-gradient(90deg, #777, #bbb); }
+
+    #no-detections {
+      text-align: center;
+      padding: 24px;
+      color: var(--text-muted);
+      display: none;
+    }
+
+    /* ── Footer ───────────────────────────────────────────────────── */
+    footer {
+      width: 100%;
+      text-align: center;
+      padding: 16px;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      border-top: 1px solid var(--border);
+    }
+
+    footer a { color: var(--accent-fire); text-decoration: none; }
+  </style>
+</head>
+<body>
+
+<!-- ── Header ─────────────────────────────────────────────────────────── -->
+<header>
+  <span style="font-size:2rem">🔥</span>
+  <div>
+    <h1>Hệ thống <span>Phát hiện Cháy</span> Sớm</h1>
+    <div style="display:flex;gap:8px;margin-top:6px">
+      <span class="badge">RT-DETR-L</span>
+      <span class="badge">SAHI</span>
+      <span class="badge">AI · Fire &amp; Smoke</span>
+    </div>
+  </div>
+</header>
+
+<!-- ── Main ───────────────────────────────────────────────────────────── -->
+<main>
+
+  <!-- Alert banner -->
+  <div id="alert-banner"></div>
+
+  <!-- Upload Card -->
+  <div class="card">
+    <div class="card-title">📤 Tải lên ảnh để phân tích</div>
+
+    <div id="drop-zone" role="button" tabindex="0" aria-label="Upload image">
+      <span class="icon">🖼️</span>
+      <p><strong>Kéo thả ảnh vào đây</strong></p>
+      <p>hoặc nhấp để chọn file (JPG, PNG, BMP)</p>
+      <div id="file-name"></div>
+    </div>
+    <input type="file" id="file-input" accept="image/jpeg,image/png,image/bmp,image/webp" />
+
+    <!-- Image preview with detection overlay -->
+    <div id="preview-wrapper">
+      <canvas id="preview-canvas"></canvas>
+    </div>
+  </div>
+
+  <!-- Controls Card -->
+  <div class="card">
+    <div class="card-title">⚙️ Cài đặt phân tích</div>
+    <div class="controls">
+      <label class="toggle-label">
+        <input type="checkbox" id="sahi-toggle" />
+        <span class="toggle-switch"></span>
+        Dùng SAHI cho vật thể nhỏ
+      </label>
+
+      <button id="analyze-btn" disabled>
+        <span class="spinner"></span>
+        <span class="btn-text">🔍 Phân tích ảnh</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Results Card -->
+  <div class="card" id="results-section">
+    <div class="card-title">📊 Kết quả phát hiện</div>
+
+    <div id="results-meta">
+      <div class="meta-chip">
+        <span class="label">Số phát hiện</span>
+        <span class="value" id="meta-count">—</span>
+      </div>
+      <div class="meta-chip">
+        <span class="label">Lửa (Fire)</span>
+        <span class="value fire-color" id="meta-fire">—</span>
+      </div>
+      <div class="meta-chip">
+        <span class="label">Khói (Smoke)</span>
+        <span class="value smoke-color" id="meta-smoke">—</span>
+      </div>
+      <div class="meta-chip">
+        <span class="label">Thời gian xử lý</span>
+        <span class="value" id="meta-time">—</span>
+      </div>
+    </div>
+
+    <div id="no-detections">✅ Không phát hiện lửa hoặc khói.</div>
+
+    <table id="det-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Loại</th>
+          <th>Độ tin cậy</th>
+          <th>Tọa độ (x1, y1, x2, y2)</th>
+        </tr>
+      </thead>
+      <tbody id="det-tbody"></tbody>
+    </table>
+  </div>
+
+</main>
+
+<!-- ── Footer ─────────────────────────────────────────────────────────── -->
+<footer>
+  Hệ thống Phát hiện Cháy Sớm &mdash; RT-DETR-L &middot; SAHI &middot;
+  <a href="/docs" target="_blank">API Docs</a> &middot;
+  Trường ĐH Tôn Đức Thắng (TDTU) &copy; 2026
+</footer>
+
+<!-- ── JavaScript ─────────────────────────────────────────────────────── -->
+<script>
+  'use strict';
+
+  const dropZone   = document.getElementById('drop-zone');
+  const fileInput  = document.getElementById('file-input');
+  const fileName   = document.getElementById('file-name');
+  const previewWrap = document.getElementById('preview-wrapper');
+  const canvas     = document.getElementById('preview-canvas');
+  const ctx        = canvas.getContext('2d');
+  const analyzeBtn = document.getElementById('analyze-btn');
+  const sahiToggle = document.getElementById('sahi-toggle');
+  const alertBanner = document.getElementById('alert-banner');
+  const resultsSection = document.getElementById('results-section');
+  const detTbody   = document.getElementById('det-tbody');
+  const noDetEl    = document.getElementById('no-detections');
+  const metaCount  = document.getElementById('meta-count');
+  const metaFire   = document.getElementById('meta-fire');
+  const metaSmoke  = document.getElementById('meta-smoke');
+  const metaTime   = document.getElementById('meta-time');
+
+  let selectedFile = null;
+  let originalImage = null; // HTMLImageElement for re-drawing
+
+  /* ── Drag-and-drop ──────────────────────────────────────────────── */
+  dropZone.addEventListener('dragover', e => {
+    e.preventDefault();
+    dropZone.classList.add('dragover');
+  });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+    const file = e.dataTransfer.files[0];
+    if (file) handleFile(file);
+  });
+
+  dropZone.addEventListener('click', () => fileInput.click());
+  dropZone.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') fileInput.click(); });
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files[0]) handleFile(fileInput.files[0]);
+  });
+
+  /* ── File handling ──────────────────────────────────────────────── */
+  function handleFile(file) {
+    if (!file.type.startsWith('image/')) {
+      alert('Vui lòng chọn file ảnh (JPG, PNG, BMP).');
+      return;
+    }
+
+    selectedFile = file;
+    fileName.textContent = `📎 ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+    analyzeBtn.disabled = false;
+
+    // Show preview
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const img = new Image();
+      img.onload = () => {
+        originalImage = img;
+        canvas.width  = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        ctx.drawImage(img, 0, 0);
+        previewWrap.style.display = 'block';
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+
+    // Reset previous results
+    resetResults();
+  }
+
+  /* ── Analyse ────────────────────────────────────────────────────── */
+  analyzeBtn.addEventListener('click', async () => {
+    if (!selectedFile) return;
+
+    analyzeBtn.classList.add('loading');
+    analyzeBtn.disabled = true;
+    resetResults();
+
+    const endpoint = sahiToggle.checked ? '/v1/predict_sahi' : '/v1/predict';
+    const formData = new FormData();
+    formData.append('file', selectedFile);
+
+    try {
+      const resp = await fetch(endpoint, { method: 'POST', body: formData });
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({ detail: 'Unknown error' }));
+        throw new Error(err.detail || resp.statusText);
+      }
+      const data = await resp.json();
+      renderResults(data);
+    } catch (err) {
+      alertBanner.className = '';
+      alertBanner.classList.add('fire');
+      alertBanner.textContent = `❌ Lỗi: ${err.message}`;
+      alertBanner.style.display = 'block';
+    } finally {
+      analyzeBtn.classList.remove('loading');
+      analyzeBtn.disabled = false;
+    }
+  });
+
+  /* ── Render results ─────────────────────────────────────────────── */
+  function renderResults(data) {
+    resultsSection.style.display = 'block';
+
+    const dets = data.detections || [];
+    const fireCount  = dets.filter(d => d.class.toLowerCase() === 'fire').length;
+    const smokeCount = dets.filter(d => d.class.toLowerCase() === 'smoke').length;
+
+    metaCount.textContent = dets.length;
+    metaFire.textContent  = fireCount  > 0 ? `✅ ${fireCount} phát hiện` : '—';
+    metaSmoke.textContent = smokeCount > 0 ? `✅ ${smokeCount} phát hiện` : '—';
+    metaTime.textContent  = `${data.processing_time_ms} ms`;
+
+    // Alert banner
+    if (data.fire_detected) {
+      alertBanner.className = 'fire';
+      alertBanner.textContent = '🔥 CẢNH BÁO! Phát hiện LỬA — Vui lòng liên hệ 114 ngay!';
+    } else if (data.smoke_detected) {
+      alertBanner.className = 'smoke';
+      alertBanner.textContent = '🌫️ Phát hiện KHÓI — Kiểm tra nguồn khói!';
+    } else {
+      alertBanner.className = 'safe';
+      alertBanner.textContent = '✅ An toàn — Không phát hiện lửa hoặc khói.';
+    }
+    alertBanner.style.display = 'block';
+
+    // Table
+    detTbody.innerHTML = '';
+    if (dets.length === 0) {
+      noDetEl.style.display = 'block';
+      document.getElementById('det-table').style.display = 'none';
+    } else {
+      noDetEl.style.display = 'none';
+      document.getElementById('det-table').style.display = '';
+      dets.forEach((det, i) => {
+        const cls    = det.class.toLowerCase();
+        const pct    = (det.confidence * 100).toFixed(1);
+        const bboxStr = det.bbox.map(v => Math.round(v)).join(', ');
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${i + 1}</td>
+          <td><span class="class-pill ${cls}">${det.class}</span></td>
+          <td>
+            <div class="conf-bar-wrapper">
+              <div class="conf-bar">
+                <div class="conf-fill ${cls}" style="width:${pct}%"></div>
+              </div>
+              <span style="font-size:0.82rem;min-width:42px">${pct}%</span>
+            </div>
+          </td>
+          <td style="font-size:0.78rem;color:var(--text-muted)">[${bboxStr}]</td>
+        `;
+        detTbody.appendChild(tr);
+      });
+    }
+
+    // Draw bounding boxes on canvas
+    drawBoxes(dets);
+  }
+
+  /* ── Draw bounding boxes ────────────────────────────────────────── */
+  function drawBoxes(dets) {
+    if (!originalImage) return;
+
+    // Redraw original image
+    canvas.width  = originalImage.naturalWidth;
+    canvas.height = originalImage.naturalHeight;
+    ctx.drawImage(originalImage, 0, 0);
+
+    const fontSize = Math.max(14, Math.round(canvas.width / 50));
+    ctx.lineWidth = Math.max(2, Math.round(canvas.width / 300));
+
+    dets.forEach(det => {
+      const [x1, y1, x2, y2] = det.bbox;
+      const cls = det.class.toLowerCase();
+      const color = cls === 'fire' ? '#ff4d00' : '#aaaaaa';
+      const pct   = (det.confidence * 100).toFixed(1);
+
+      // Box
+      ctx.strokeStyle = color;
+      ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+
+      // Label background
+      ctx.font = `bold ${fontSize}px sans-serif`;
+      const label = `${det.class} ${pct}%`;
+      const textW = ctx.measureText(label).width;
+      ctx.fillStyle = color;
+      ctx.globalAlpha = 0.85;
+      ctx.fillRect(x1, y1 - fontSize - 6, textW + 10, fontSize + 6);
+      ctx.globalAlpha = 1.0;
+
+      // Label text
+      ctx.fillStyle = '#fff';
+      ctx.fillText(label, x1 + 5, y1 - 5);
+    });
+  }
+
+  /* ── Reset ──────────────────────────────────────────────────────── */
+  function resetResults() {
+    resultsSection.style.display = 'none';
+    alertBanner.style.display = 'none';
+    alertBanner.className = '';
+    detTbody.innerHTML = '';
+    noDetEl.style.display = 'none';
+    metaCount.textContent = metaFire.textContent = metaSmoke.textContent = metaTime.textContent = '—';
+  }
+</script>
+</body>
+</html>

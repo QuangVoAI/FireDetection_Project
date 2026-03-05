@@ -1,0 +1,66 @@
+model:
+  architecture: rtdetr-l
+  backbone: resnet50
+  num_classes: 2
+  class_names: ["Fire", "Smoke"]
+  pretrained: true
+  img_size: 640
+
+training:
+  epochs: 100
+  batch_size: 16
+  learning_rate: 1e-4
+  optimizer: AdamW
+  weight_decay: 0.0001
+  warmup_epochs: 5
+  cosine_annealing: true
+  early_stopping_patience: 15
+  label_smoothing: 0.1
+  gradient_clip: 5.0
+  teacher_forcing: false
+
+augmentation:
+  mosaic: true
+  mixup: true
+  random_brightness: true
+  brightness_limit: 0.3
+  random_flip: true
+  random_rotate: 15
+  hsv_h: 0.015
+  hsv_s: 0.7
+  hsv_v: 0.4
+
+data:
+  train_split: 0.85
+  val_split: 0.15
+  min_bbox_area: 16
+  data_dirs:
+    - data/01_Positive_Standard
+    - data/02_Alley_Context
+    - data/03_Negative_Hard_Samples
+    - data/04_SAHI_Small_Objects
+    - data/05_Real_Situation
+
+sahi:
+  enabled: true
+  slice_height: 320
+  slice_width: 320
+  overlap_height_ratio: 0.2
+  overlap_width_ratio: 0.2
+  postprocess_type: NMS
+  postprocess_match_threshold: 0.5
+
+inference:
+  confidence_threshold: 0.35
+  iou_threshold: 0.5
+  beam_search: false
+  max_detections: 100
+
+alert:
+  audio_alarm: true
+  telegram_enabled: false
+  zalo_enabled: false
+  twilio_enabled: false
+  vietmap_enabled: false
+  fire_confidence_threshold: 0.5
+  consecutive_frames_to_alert: 3
