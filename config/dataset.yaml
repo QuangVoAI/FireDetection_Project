@@ -1,0 +1,10 @@
+# YOLO-format dataset descriptor used by Ultralytics
+path: ../../data/processed   # relative to ultralytics dataset root
+train: train/images
+val: val/images
+test: test/images
+
+nc: 2
+names:
+  - Fire
+  - Smoke

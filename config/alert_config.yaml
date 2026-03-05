@@ -1,0 +1,42 @@
+# ──────────────────────────────────────────────
+# Alert & Notification Configuration
+# ──────────────────────────────────────────────
+
+alert:
+  confidence_threshold: 0.45     # Min score to consider a detection valid
+  consecutive_frames: 3          # Detections in N consecutive frames → alert
+  cooldown_seconds: 60           # Minimum seconds between repeated alerts
+
+# Sound alert (local buzzer / siren wav)
+sound:
+  enabled: true
+  wav_file: assets/siren.wav     # Path to siren sound file
+
+# Telegram Bot
+telegram:
+  enabled: true
+  # Token and chat_id are loaded from .env (TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID)
+  message_template: "🔥 CẢNH BÁO CHÁY!\n📍 Địa chỉ: {address}\n🌐 Toạ độ: {lat}, {lon}\n⏰ Thời gian: {time}\n📊 Độ tin cậy: {confidence:.1%}"
+
+# Zalo OA (Open API)
+zalo:
+  enabled: false
+  # Access token loaded from .env (ZALO_ACCESS_TOKEN / ZALO_USER_ID)
+  message_template: "🔥 CẢNH BÁO CHÁY!\n📍 {address}\n⏰ {time}"
+
+# Twilio SMS / Voice Call
+twilio:
+  enabled: false
+  sms:
+    enabled: true
+    # Credentials loaded from .env
+    message_template: "FIRE ALERT at {address} ({lat},{lon}) at {time}. Confidence: {confidence:.0%}"
+  voice:
+    enabled: false
+    twiml_message: "Fire detected at {address}. Please respond immediately."
+
+# Vietmap reverse-geocoding (address lookup from GPS coordinates)
+vietmap:
+  enabled: true
+  reverse_geocode_url: "https://maps.vietmap.vn/api/reverse/v3"
+  # API key loaded from .env (VIETMAP_API_KEY)

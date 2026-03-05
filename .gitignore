@@ -1,0 +1,68 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+parts/
+var/
+sdist/
+wheels/
+*.egg-link
+.installed.cfg
+
+# Virtual environments
+venv/
+env/
+.env
+ENV/
+.venv/
+
+# Environment / secrets
+.env
+*.env.local
+
+# Jupyter Notebooks
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# Data (raw images – do not commit large binary files)
+data/01_Positive_Standard/images/
+data/02_Alley_Context/images/
+data/03_Negative_Hard_Samples/images/
+data/04_SAHI_Small_Objects/images/
+data/05_Real_Situation/images/
+data/processed/
+
+# Model weights
+models/weights/*.pt
+models/weights/*.pth
+models/weights/*.onnx
+
+# Training artefacts / runs
+runs/
+logs/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Coverage
+.coverage
+htmlcov/
+.pytest_cache/
+__pycache__/
+*.pyc

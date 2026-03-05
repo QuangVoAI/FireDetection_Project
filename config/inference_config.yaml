@@ -1,0 +1,29 @@
+# ──────────────────────────────────────────────
+# Inference & SAHI Configuration
+# ──────────────────────────────────────────────
+
+inference:
+  confidence_threshold: 0.45
+  iou_threshold: 0.45
+  image_size: 640
+  device: "0"            # "cpu" for CPU-only
+
+sahi:
+  enabled: true
+  slice_height: 320
+  slice_width: 320
+  overlap_height_ratio: 0.2
+  overlap_width_ratio: 0.2
+  postprocess_type: NMW       # GREEDYNMM | NMM | NMS | NMW
+  postprocess_match_threshold: 0.5
+
+video:
+  source: 0                  # 0 = webcam; or RTSP URL string
+  display: true              # Show live window
+  save_output: false
+  output_path: runs/inference/output.mp4
+  fps_cap: 30
+
+# Folders that use SAHI slicing during batch inference
+sahi_folders:
+  - data/04_SAHI_Small_Objects

@@ -1,0 +1,46 @@
+# ──────────────────────────────────────────────
+# RT-DETR-L Model Configuration
+# ──────────────────────────────────────────────
+
+model:
+  architecture: rtdetr-l          # Ultralytics RT-DETR-L
+  weights: models/weights/best.pt # Path to trained weights (empty → pretrained)
+  num_classes: 2
+  class_names:
+    - Fire
+    - Smoke
+
+training:
+  epochs: 100
+  batch_size: 16
+  image_size: 640
+  device: "0"                     # GPU id; "cpu" for CPU-only
+  workers: 8
+  learning_rate: 0.0001
+  weight_decay: 0.0001
+  patience: 20                    # Early-stopping patience
+  save_period: 10                 # Save checkpoint every N epochs
+  project: runs/train
+  name: rtdetr_fire_detection
+  pretrained: true                # Fine-tune from COCO pretrained weights
+
+  # Augmentation
+  mosaic: 1.0
+  mixup: 0.15
+  degrees: 5.0
+  translate: 0.1
+  scale: 0.5
+  fliplr: 0.5
+  hsv_h: 0.015
+  hsv_s: 0.7
+  hsv_v: 0.4
+
+dataset:
+  path: data/processed
+  train: train/images
+  val:   val/images
+  test:  test/images
+  # Split ratios (used during preprocessing)
+  train_ratio: 0.80
+  val_ratio:   0.10
+  test_ratio:  0.10
