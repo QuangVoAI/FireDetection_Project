@@ -446,5 +446,5 @@ Academic use only — not for commercial redistribution.
 ---
 
 <div align="center">
-  <sub>Built with ❤️ and 🔥 detection for the safety of HCMC communities</sub>
+  <sub>Built with dedication and safety for the happiness of communities</sub>
 </div>
