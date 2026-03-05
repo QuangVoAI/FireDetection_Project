@@ -1,0 +1,58 @@
+# ============================================================
+# .gitignore — Các file/folder KHÔNG đẩy lên Git
+# ============================================================
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+
+# --- Virtual Environment ---
+venv/
+env/
+.venv/
+
+# --- IDE ---
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# --- Dataset (quá lớn, không push lên Git) ---
+data/01_Positive_Standard/images/
+data/01_Positive_Standard/labels/
+data/02_Alley_Context/images/
+data/02_Alley_Context/labels/
+data/03_Negative_Hard_Samples/images/
+data/03_Negative_Hard_Samples/labels/
+data/04_SAHI_Small_Objects/images/
+data/04_SAHI_Small_Objects/labels/
+data/05_Real_Situation/images/
+data/05_Real_Situation/labels/
+
+# --- Model Weights ---
+*.pt
+*.pth
+*.onnx
+*.engine
+runs/
+
+# --- Environment Variables (chứa API keys!) ---
+.env
+
+# --- Jupyter Notebook checkpoints ---
+.ipynb_checkpoints/
+
+# --- OS files ---
+.DS_Store
+Thumbs.db
+
+# --- Logs ---
+*.log
+wandb/

@@ -1,0 +1,166 @@
+# ============================================================
+# 🔥 CẤU HÌNH HỆ THỐNG PHÁT HIỆN CHÁY SỚM
+# Early Fire Detection System — Configuration
+# ============================================================
+# File này chứa toàn bộ hyperparameters cho training & inference.
+# Bạn có thể thay đổi các giá trị ở đây mà KHÔNG cần sửa code.
+# ============================================================
+
+# --- Cấu hình Model ---
+# architecture: loại model sử dụng (RT-DETR có nhiều variant: s, m, l, x)
+# img_size: kích thước ảnh đầu vào (640x640 là chuẩn cho RT-DETR)
+# num_classes: số lớp phát hiện (Fire=0, Smoke=1)
+# pretrained: dùng trọng số đã huấn luyện trước trên COCO
+model:
+  architecture: "rtdetr-l"        # RT-DETR-L (Large variant) — cân bằng giữa tốc độ và độ chính xác
+  img_size: 640                   # Input image size (pixels)
+  num_classes: 2                  # 0: Fire (Lửa), 1: Smoke (Khói)
+  pretrained: true                # Sử dụng pretrained weights từ COCO dataset
+  weights_path: "rtdetr-l.pt"    # Tên file weights mặc định từ Ultralytics
+
+# --- Cấu hình Training ---
+# epochs: số vòng lặp huấn luyện
+# batch_size: số ảnh xử lý cùng lúc (phụ thuộc VRAM GPU)
+# learning_rate: tốc độ học — quá lớn sẽ không hội tụ, quá nhỏ sẽ chậm
+# optimizer: thuật toán tối ưu (AdamW phổ biến cho Transformer)
+# scheduler: chiến lược giảm learning rate
+# early_stopping_patience: dừng sớm nếu không cải thiện sau N epochs
+training:
+  epochs: 100                     # Tổng số epochs cho mỗi stage
+  batch_size: 16                  # Batch size (giảm nếu thiếu VRAM, vd: 8)
+  learning_rate: 0.0001           # Learning rate ban đầu (1e-4)
+  optimizer: "AdamW"              # Optimizer: AdamW tốt cho Transformer
+  weight_decay: 0.0001            # Hệ số regularization (tránh overfitting)
+  scheduler: "cosine"             # Cosine annealing — giảm LR theo hình cos
+  warmup_epochs: 3                # Số epochs khởi động (tăng LR từ từ)
+  early_stopping_patience: 15    # Dừng nếu val loss không giảm sau 15 epochs
+
+  # --- Stage-specific settings ---
+  # Mỗi stage có thể override epochs và learning_rate
+  stages:
+    baseline:
+      epochs: 80
+      learning_rate: 0.0001
+      data_folders:
+        - "01_Positive_Standard"
+        - "02_Alley_Context"
+
+    hard_negative:
+      epochs: 50
+      learning_rate: 0.00005       # LR nhỏ hơn vì fine-tuning
+      data_folders:
+        - "01_Positive_Standard"
+        - "02_Alley_Context"
+        - "03_Negative_Hard_Samples"
+
+    sahi:
+      epochs: 30
+      learning_rate: 0.00002       # LR rất nhỏ cho fine-tuning cuối
+      data_folders:
+        - "04_SAHI_Small_Objects"
+        - "05_Real_Situation"
+
+# --- Cấu hình Data ---
+# base_dir: thư mục gốc chứa dataset
+# train_split / val_split: tỷ lệ chia train/val
+# num_workers: số process song song load data
+data:
+  base_dir: "data"
+  train_split: 0.8                # 80% dùng train
+  val_split: 0.2                  # 20% dùng validation
+  num_workers: 4                  # Song song load data (tăng nếu CPU mạnh)
+  class_names:
+    - "Fire"                      # class_id = 0
+    - "Smoke"                     # class_id = 1
+
+# --- Cấu hình Augmentation (Tăng cường dữ liệu) ---
+# Các kỹ thuật biến đổi ảnh để model học tốt hơn
+augmentation:
+  horizontal_flip: 0.5            # Lật ngang (50% xác suất)
+  vertical_flip: 0.0              # Không lật dọc (lửa luôn hướng lên)
+  rotation_limit: 15              # Xoay tối đa ±15 độ
+  brightness_limit: 0.3           # Thay đổi độ sáng ±30%
+  contrast_limit: 0.3             # Thay đổi độ tương phản ±30%
+  hue_shift_limit: 10             # Thay đổi màu sắc
+  saturation_limit: 30            # Thay đổi độ bão hòa
+  blur_limit: 3                   # Mờ nhẹ (mô phỏng camera chất lượng thấp)
+  noise_prob: 0.2                 # Thêm noise 20% ảnh
+  mosaic_prob: 0.5                # Mosaic augmentation (ghép 4 ảnh)
+
+# --- Cấu hình SAHI (Slicing Aided Hyper Inference) ---
+# Chia ảnh lớn thành các patch nhỏ để phát hiện vật thể nhỏ/xa
+sahi:
+  enabled: true
+  slice_height: 320               # Chiều cao mỗi patch (pixels)
+  slice_width: 320                # Chiều rộng mỗi patch
+  overlap_height_ratio: 0.2       # Tỷ lệ overlap theo chiều cao (20%)
+  overlap_width_ratio: 0.2        # Tỷ lệ overlap theo chiều rộng (20%)
+  postprocess_type: "NMS"         # Non-Maximum Suppression để gộp kết quả
+  postprocess_match_threshold: 0.5  # IoU threshold cho NMS
+  postprocess_class_agnostic: false # NMS riêng cho mỗi class
+
+# --- Cấu hình Inference (Suy luận) ---
+# confidence_threshold: ngưỡng tin cậy tối thiểu để giữ detection
+# iou_threshold: ngưỡng IoU cho NMS (chỉ dùng khi không dùng end-to-end)
+inference:
+  confidence_threshold: 0.35      # Chỉ giữ detection có confidence ≥ 35%
+  iou_threshold: 0.5              # IoU threshold
+  max_detections: 100             # Số detection tối đa mỗi ảnh
+  device: "auto"                  # "auto", "cuda", "cpu", "mps"
+  half_precision: false            # FP16 để tăng tốc (cần GPU hỗ trợ)
+
+# --- Cấu hình Alert (Cảnh báo) ---
+# Hệ thống cảnh báo đa kênh khi phát hiện cháy
+alert:
+  enabled: true
+  consecutive_frames_to_alert: 3  # Số frame liên tiếp phát hiện mới cảnh báo
+  cooldown_seconds: 60             # Thời gian chờ giữa 2 lần cảnh báo (tránh spam)
+
+  # Cảnh báo âm thanh
+  audio:
+    enabled: true
+    alarm_file: "assets/alarm.wav"
+
+  # Cảnh báo qua Telegram
+  telegram:
+    enabled: false                 # Bật khi có bot token
+    bot_token: ""                  # Lấy từ @BotFather trên Telegram
+    chat_id: ""                    # ID nhóm/người nhận
+
+  # Cảnh báo qua Zalo OA
+  zalo:
+    enabled: false
+    access_token: ""
+    user_id: ""
+
+  # Cảnh báo qua SMS (Twilio)
+  twilio:
+    enabled: false
+    account_sid: ""
+    auth_token: ""
+    from_number: ""
+    to_numbers: []
+
+  # Geocoding (chuyển GPS → địa chỉ)
+  vietmap:
+    enabled: false
+    api_key: ""
+
+# --- Cấu hình Output ---
+output:
+  save_dir: "runs"                # Thư mục lưu kết quả
+  save_predictions: true          # Lưu ảnh có bbox
+  save_labels: true               # Lưu file labels dự đoán
+  log_interval: 10                # In log mỗi N batch
+
+# --- Cấu hình Evaluation ---
+evaluation:
+  metrics:
+    - "mAP50"
+    - "mAP50-95"
+    - "precision"
+    - "recall"
+    - "f1"
+  plot_confusion_matrix: true
+  plot_pr_curve: true
+  save_results: true

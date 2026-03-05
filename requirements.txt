@@ -1,0 +1,45 @@
+# ============================================================
+# 🔥 Dependencies — Hệ thống Phát hiện Cháy Sớm
+# ============================================================
+# Cài đặt: pip install -r requirements.txt
+# ============================================================
+
+# --- Deep Learning Framework ---
+torch>=2.0.0                  # PyTorch — framework deep learning chính
+torchvision>=0.15.0           # Xử lý ảnh cho PyTorch
+
+# --- Object Detection ---
+ultralytics>=8.0.0            # RT-DETR, YOLOv8 — thư viện detection
+sahi>=0.11.0                  # Slicing Aided Hyper Inference cho small objects
+
+# --- Image Processing ---
+opencv-python>=4.8.0          # Xử lý ảnh/video (đọc, ghi, biến đổi)
+albumentations>=1.3.0         # Data augmentation (tăng cường dữ liệu)
+Pillow>=9.0.0                 # Xử lý ảnh cơ bản
+imagehash>=4.3.0              # Deduplication — phát hiện ảnh trùng lặp
+
+# --- Web Server ---
+fastapi>=0.100.0              # Web framework (API server)
+uvicorn>=0.23.0               # ASGI server chạy FastAPI
+python-multipart>=0.0.6       # Upload file qua form
+
+# --- Configuration ---
+pyyaml>=6.0                   # Đọc file YAML config
+python-dotenv>=1.0.0          # Đọc biến môi trường từ file .env
+
+# --- Alerting ---
+python-telegram-bot>=20.0     # Gửi cảnh báo qua Telegram
+twilio>=8.0.0                 # Gửi SMS/Voice qua Twilio
+pygame>=2.5.0                 # Phát âm thanh cảnh báo
+requests>=2.31.0              # HTTP requests (Zalo OA, Vietmap API)
+
+# --- Visualization & Logging ---
+matplotlib>=3.7.0             # Vẽ biểu đồ (loss curves, PR curves)
+seaborn>=0.12.0               # Vẽ confusion matrix đẹp
+tqdm>=4.65.0                  # Progress bar cho training
+tensorboard>=2.14.0           # Log training metrics
+
+# --- Utilities ---
+numpy>=1.24.0                 # Tính toán ma trận
+pandas>=2.0.0                 # Xử lý dữ liệu dạng bảng
+scikit-learn>=1.3.0           # Metrics đánh giá (confusion matrix, etc.)

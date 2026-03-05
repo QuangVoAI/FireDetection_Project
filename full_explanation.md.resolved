@@ -1,0 +1,680 @@
+# 🔥 Giải thích Toàn bộ Hệ thống Phát hiện Cháy Sớm
+
+> [!NOTE]
+> Tài liệu này giải thích **từng file** trong project và **luồng đi** từ đầu đến cuối, để bạn vừa làm đồ án vừa hiểu sâu hệ thống.
+
+---
+
+## 🗺️ Bức tranh tổng quan
+
+Hãy tưởng tượng hệ thống như một **nhà máy sản xuất**:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    HỆ THỐNG PHÁT HIỆN CHÁY                  │
+│                                                             │
+│  📸 ẢNH/VIDEO ──► 🧠 MODEL AI ──► 📊 KẾT QUẢ ──► 🚨 CẢNH BÁO  │
+│  (Input)          (Xử lý)        (Output)        (Hành động) │
+│                                                             │
+│  Ảnh hẻm TPHCM    RT-DETR-L     Fire 92%        Telegram   │
+│  Camera iPhone     + SAHI        Smoke 87%       SMS, Zalo  │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+Nhưng trước khi "nhà máy" hoạt động, bạn cần **"dạy"** nó (training). Và sau khi dạy xong, bạn **"triển khai"** (deploy) để mọi người dùng.
+
+---
+
+## 📋 Luồng đi tổng thể — Bạn sẽ làm gì từ đầu đến cuối?
+
+```mermaid
+graph TD
+    A["🏁 BẮT ĐẦU"] --> B["📁 1. Thu thập dữ liệu<br/>(Ảnh lửa, khói, hẻm)"]
+    B --> C["🏷️ 2. Gán nhãn<br/>(LabelImg → YOLO format)"]
+    C --> D["🔧 3. Tiền xử lý<br/>(Validate, dedup, resize)"]
+    D --> E["🏋️ 4. Training 3 stages<br/>(Baseline → Hard Neg → SAHI)"]
+    E --> F["📊 5. Đánh giá<br/>(mAP, Precision, Recall)"]
+    F --> G{"Kết quả tốt?"}
+    G -- "Chưa tốt" --> B
+    G -- "Tốt rồi ✅" --> H["🌐 6. Deploy Web/PWA<br/>(FastAPI + iPhone app)"]
+    H --> I["🎉 HOÀN THÀNH"]
+```
+
+---
+
+## 📁 Giải thích từng File — Theo thứ tự bạn sẽ dùng
+
+### ── PHASE 1: CẤU HÌNH (Setup một lần) ──
+
+#### 📄 [configs/default.yaml](file:///Users/springwang/Library/Mobile%20Documents/com~apple~CloudDocs/juniorYear/DeepLearning/Final_523H0173_523H0178/configs/default.yaml) — Bộ não điều khiển
+[Mở file](file:///Users/springwang/Library/Mobile%20Documents/com~apple~CloudDocs/juniorYear/DeepLearning/Final_523H0173_523H0178/configs/default.yaml)
+
+```
+VAI TRÒ: Chứa TẤT CẢ tham số của hệ thống ở MỘT chỗ.
+         Bạn thay đổi hành vi hệ thống bằng cách sửa file này,
+         KHÔNG cần sửa code Python.
+
+TƯƠNG TỰ: Giống "Cài đặt" (Settings) trên iPhone.
+           Muốn tăng âm lượng → vào Settings → sửa.
+           Muốn tăng epochs → vào default.yaml → sửa.
+```
+
+**Các phần quan trọng trong file:**
+
+| Phần | Ý nghĩa | Ví dụ |
+|---|---|---|
+| `model:` | Chọn model nào, kích thước ảnh | `rtdetr-l`, `640x640` |
+| `training:` | Tham số training (epochs, LR, batch) | `epochs: 100`, `lr: 1e-4` |
+| `training.stages:` | Cấu hình riêng cho 3 stages | Stage 1 dùng folder nào, LR bao nhiêu |
+| `data:` | Đường dẫn dataset, tỷ lệ train/val | `train_split: 0.8` |
+| `augmentation:` | Cách biến đổi ảnh để tăng data | Lật, xoay, đổi sáng |
+| `sahi:` | Cấu hình chia ảnh nhỏ | Patch `320x320`, overlap `20%` |
+| `inference:` | Ngưỡng detect khi chạy thật | `confidence ≥ 0.35` |
+| `alert:` | Cấu hình cảnh báo | Telegram, SMS, bao nhiêu frame mới báo |
+
+---
+
+#### 📄 [requirements.txt](file:///Users/springwang/Library/Mobile%20Documents/com~apple~CloudDocs/juniorYear/DeepLearning/Final_523H0173_523H0178/requirements.txt) — Danh sách thư viện cần cài
+[Mở file](file:///Users/springwang/Library/Mobile%20Documents/com~apple~CloudDocs/juniorYear/DeepLearning/Final_523H0173_523H0178/requirements.txt)
+
+```
+VAI TRÒ: Liệt kê tất cả thư viện Python cần cài.
+         Chạy: pip install -r requirements.txt → cài tất cả.
+
+TƯƠNG TỰ: Giống "danh sách nguyên vật liệu" khi nấu ăn.
+           Trước khi nấu phở → cần: bánh phở, thịt bò, hành, ...
+           Trước khi chạy code → cần: torch, ultralytics, sahi, ...
+```
+
+---
+
+#### 📄 [.env.example](file:///Users/springwang/Library/Mobile%20Documents/com~apple~CloudDocs/juniorYear/DeepLearning/Final_523H0173_523H0178/.env.example) / `.env` — API Keys bí mật
+[Mở file](file:///Users/springwang/Library/Mobile%20Documents/com~apple~CloudDocs/juniorYear/DeepLearning/Final_523H0173_523H0178/.env.example)
+
+```
+VAI TRÒ: Chứa mật khẩu/key để gọi API bên ngoài.
+         .env.example = mẫu (push lên Git OK)
+         .env = thật (CẤM push lên Git!)
+
+TƯƠNG TỰ: .env.example giống "form đăng ký trống"
+           .env giống "form đã điền thông tin cá nhân"
+```
+
+---
+
+#### 📄 [.gitignore](file:///Users/springwang/Library/Mobile%20Documents/com~apple~CloudDocs/juniorYear/DeepLearning/Final_523H0173_523H0178/.gitignore) — Danh sách file Git bỏ qua
+[Mở file](file:///Users/springwang/Library/Mobile%20Documents/com~apple~CloudDocs/juniorYear/DeepLearning/Final_523H0173_523H0178/.gitignore)
+
+```
+VAI TRÒ: Nói Git KHÔNG push các file này lên GitHub.
+
+TẠI SAO? Vì:
+  - Dataset quá lớn (hàng GB) → GitHub giới hạn 100MB/file
+  - Model weights lớn → không push
+  - .env chứa API keys → bí mật
+  - __pycache__ → file tạm, không cần
+```
+
+---
+
+#### 📄 [Dockerfile](file:///Users/springwang/Library/Mobile%20Documents/com~apple~CloudDocs/juniorYear/DeepLearning/Final_523H0173_523H0178/Dockerfile) — Đóng gói app vào "hộp"
+[Mở file](file:///Users/springwang/Library/Mobile%20Documents/com~apple~CloudDocs/juniorYear/DeepLearning/Final_523H0173_523H0178/Dockerfile)
+
+```
+VAI TRÒ: Đóng gói toàn bộ app + dependencies vào 1 container.
+         Ai cũng có thể chạy mà không cần cài gì thêm.
+
+TƯƠNG TỰ: Giống đóng gói "mì gói" → chỉ cần đổ nước sôi.
+           Docker container → chỉ cần "docker run" là chạy.
+```
+
+---
+
+### ── PHASE 2: DỮ LIỆU (Thu thập + Xử lý) ──
+
+#### 📁 [data/](file:///Users/springwang/Library/Mobile%20Documents/com~apple~CloudDocs/juniorYear/DeepLearning/Final_523H0173_523H0178/src/data/dataset.py#210-239) — 5 thư mục dữ liệu
+
+```
+VAI TRÒ: Chứa ảnh + labels cho training.
+         Chia 5 folder theo MỤC ĐÍCH khác nhau.
+
+TƯƠNG TỰ: Giống sách giáo khoa chia theo chương:
+  Chương 1: Kiến thức cơ bản (01_Positive_Standard)
+  Chương 2: Bài tập thực tế (02_Alley_Context)
+  Chương 3: Bài tập khó (03_Negative_Hard_Samples)
+  Chương 4: Bài nâng cao (04_SAHI_Small_Objects)
+  Chương 5: Đề thi thực (05_Real_Situation)
+```
+
+````carousel
+**📁 01_Positive_Standard** — Lửa/khói rõ ràng
+```
+Nguồn: Kaggle, COCO, Roboflow
+Nội dung: Ảnh lửa cháy to, khói đen rõ ràng
+Mục đích: Dạy model CƠ BẢN "lửa trông như thế nào"
+Dùng ở: Stage 1 (Baseline)
+```
+<!-- slide -->
+**📁 02_Alley_Context** — Cảnh hẻm TPHCM
+```
+Nguồn: Tự chụp tại Quận 7, Quận 4, Tân Bình
+Nội dung: Hẻm nhỏ, xe máy, dây điện, quán ăn
+Mục đích: Model quen với BỐI CẢNH thật
+Dùng ở: Stage 1 (Baseline)
+```
+<!-- slide -->
+**📁 03_Negative_Hard_Samples** — Mẫu "đánh lừa"
+```
+Nguồn: Tự chụp: quán phở, xe máy ban đêm
+Nội dung: Hơi phở (giống khói), đèn đỏ (giống lửa)
+Mục đích: Dạy model PHÂN BIỆT: "cái này KHÔNG phải lửa"
+Dùng ở: Stage 2 (Hard Negative)
+Labels: FILE RỖNG (vì không có lửa/khói!)
+```
+<!-- slide -->
+**📁 04_SAHI_Small_Objects** — Vật thể nhỏ/xa
+```
+Nguồn: Crop từ folder 01, camera ban công
+Nội dung: Lửa rất nhỏ, khói mỏng ở xa
+Mục đích: Model phát hiện lửa DÙ RẤT NHỎ
+Dùng ở: Stage 3 (SAHI)
+```
+<!-- slide -->
+**📁 05_Real_Situation** — Thực tế tin tức
+```
+Nguồn: VTV, VnExpress, Tuổi Trẻ
+Nội dung: Ảnh cháy thật tại TPHCM
+Mục đích: Model xử lý TÌNH HUỐNG THẬT
+Dùng ở: Stage 3 (SAHI)
+```
+````
+
+---
+
+### ── PHASE 3: SOURCE CODE (Xử lý dữ liệu) ──
+
+#### 📄 [src/config.py](file:///Users/springwang/Library/Mobile%20Documents/com~apple~CloudDocs/juniorYear/DeepLearning/Final_523H0173_523H0178/src/config.py) — Đọc file cấu hình
+[Mở file](file:///Users/springwang/Library/Mobile%20Documents/com~apple~CloudDocs/juniorYear/DeepLearning/Final_523H0173_523H0178/src/config.py)
+
+```
+VAI TRÒ: Đọc file default.yaml → tạo object Python dễ dùng.
+
+FLOW:
+  default.yaml (text) ──► load_config() ──► Config object
+                                            config.model.img_size = 640
+                                            config.training.epochs = 100
+
+TẠI SAO CẦN?
+  - YAML là text → Python không hiểu
+  - Config class chuyển thành object → gõ config.model.img_size
+  - Tiện hơn config['model']['img_size']
+```
+
+---
+
+#### 📄 [src/data/dataset.py](file:///Users/springwang/Library/Mobile%20Documents/com~apple~CloudDocs/juniorYear/DeepLearning/Final_523H0173_523H0178/src/data/dataset.py) — Quản lý dataset
+[Mở file](file:///Users/springwang/Library/Mobile%20Documents/com~apple~CloudDocs/juniorYear/DeepLearning/Final_523H0173_523H0178/src/data/dataset.py)
+
+```
+VAI TRÒ: Quét ảnh từ data/ → chia train/val → tạo data.yaml
+
+FLOW:
+  data/01_Positive_Standard/images/*.jpg  ──┐
+  data/02_Alley_Context/images/*.jpg       ──┼──► Gộp lại
+  ...                                     ──┘      │
+                                                    ▼
+                                              Shuffle ngẫu nhiên
+                                                    │
+                                          ┌─────────┴─────────┐
+                                          ▼                   ▼
+                                     80% Train            20% Val
+                                          │                   │
+                                          ▼                   ▼
+                                  runs/prepared_data/   runs/prepared_data/
+                                  train/images/         val/images/
+                                  train/labels/         val/labels/
+                                          │
+                                          ▼
+                                     data.yaml  ◄── Ultralytics đọc file này
+
+TẠI SAO CHIA TRAIN/VAL?
+  - Train: model HỌC từ data này
+  - Val: KIỂM TRA model sau mỗi epoch (data model CHƯA THẤY)
+  - Nếu train tốt nhưng val xấu → OVERFITTING (học thuộc)
+```
+
+---
+
+#### 📄 [src/data/preprocessing.py](file:///Users/springwang/Library/Mobile%20Documents/com~apple~CloudDocs/juniorYear/DeepLearning/Final_523H0173_523H0178/src/data/preprocessing.py) — Làm sạch dữ liệu
+[Mở file](file:///Users/springwang/Library/Mobile%20Documents/com~apple~CloudDocs/juniorYear/DeepLearning/Final_523H0173_523H0178/src/data/preprocessing.py)
+
+```
+VAI TRÒ: Kiểm tra + làm sạch data TRƯỚC KHI training.
+
+4 CHỨC NĂNG:
+  1. validate_yolo_labels() → Kiểm tra labels đúng format không
+     "class_id ngoài [0,1]? tọa độ > 1? thiếu trường?"
+     
+  2. check_image_quality()  → Ảnh có đọc được không, có quá nhỏ không
+     "Ảnh bị corrupt? Ảnh < 64x64 pixel?"
+     
+  3. find_duplicates()      → Tìm ảnh trùng lặp bằng perceptual hash
+     "2 ảnh giống nhau dù khác tên file?"
+     
+  4. resize_images()        → Resize về kích thước chuẩn 640x640
+     "Ảnh 1920x1080 → 640x640 (letterbox + padding)"
+
+TƯƠNG TỰ: Giống "kiểm tra nguyên liệu" trước khi nấu.
+           Thịt bị hỏng → bỏ. Rau chưa rửa → rửa.
+```
+
+---
+
+#### 📄 [src/data/augmentation.py](file:///Users/springwang/Library/Mobile%20Documents/com~apple~CloudDocs/juniorYear/DeepLearning/Final_523H0173_523H0178/src/data/augmentation.py) — Tăng cường dữ liệu
+[Mở file](file:///Users/springwang/Library/Mobile%20Documents/com~apple~CloudDocs/juniorYear/DeepLearning/Final_523H0173_523H0178/src/data/augmentation.py)
+
+```
+VAI TRÒ: Biến đổi ảnh gốc → tạo thêm ảnh mới → model học đa dạng hơn.
+
+VÍ DỤ: Từ 1 ảnh lửa → tạo ra 5-6 ảnh:
+  ┌─────────┐
+  │ Ảnh gốc │──► Lật ngang     → ảnh mới ✅ (lửa vẫn là lửa)
+  │  🔥     │──► Tăng sáng     → ảnh mới ✅ (giả lập ban ngày)
+  │         │──► Giảm sáng     → ảnh mới ✅ (giả lập ban đêm)
+  │         │──► Thêm noise    → ảnh mới ✅ (giả lập camera rẻ)
+  │         │──► Thêm shadow   → ảnh mới ✅ (giả lập bóng đổ hẻm)
+  └─────────┘
+
+QUAN TRỌNG: Khi lật ảnh → bbox cũng phải lật theo!
+  Albumentations tự xử lý điều này (bbox_params='yolo').
+
+TƯƠNG TỰ: Giống "ôn thi" nhiều dạng bài → thi đề nào cũng làm được.
+```
+
+---
+
+### ── PHASE 4: MODEL + TRAINING ──
+
+#### 📄 [src/models/rtdetr_model.py](file:///Users/springwang/Library/Mobile%20Documents/com~apple~CloudDocs/juniorYear/DeepLearning/Final_523H0173_523H0178/src/models/rtdetr_model.py) — Model AI chính
+[Mở file](file:///Users/springwang/Library/Mobile%20Documents/com~apple~CloudDocs/juniorYear/DeepLearning/Final_523H0173_523H0178/src/models/rtdetr_model.py)
+
+```
+VAI TRÒ: Wrapper bọc model RT-DETR-L từ Ultralytics.
+         Cung cấp 4 chức năng: load, train, predict, SAHI predict.
+
+RT-DETR LÀ GÌ?
+  ┌──────────────────────────────────────────────────┐
+  │            RT-DETR = "Mắt thần" AI               │
+  │                                                   │
+  │  Ảnh 640x640                                      │
+  │      │                                            │
+  │      ▼                                            │
+  │  ┌──────────┐  Giống "xương sống", trích xuất     │
+  │  │ Backbone │  đặc trưng cơ bản từ ảnh            │
+  │  │ ResNet50 │  (cạnh, góc, hình dạng, màu sắc)    │
+  │  └────┬─────┘                                     │
+  │       ▼                                            │
+  │  ┌──────────┐  Transformer kết hợp đặc trưng      │
+  │  │ Encoder  │  từ nhiều tỷ lệ (gần/xa)            │
+  │  │Transform │  (hiểu ngữ cảnh toàn ảnh)           │
+  │  └────┬─────┘                                     │
+  │       ▼                                            │
+  │  ┌──────────┐  Dự đoán vị trí + class             │
+  │  │ Decoder  │  KHÔNG cần NMS (end-to-end)          │
+  │  │ 6 layers │  → Nhanh hơn YOLO ở bước này        │
+  │  └────┬─────┘                                     │
+  │       ▼                                            │
+  │  Output: "Fire 92% tại [100,200,300,400]"          │
+  └──────────────────────────────────────────────────┘
+
+CÁC HÀM CHÍNH:
+  __init__()         → Load model (pretrained COCO hoặc custom weights)
+  train()            → Gọi Ultralytics training API
+  predict()          → Detect trên 1 ảnh/frame
+  predict_with_sahi()→ SAHI: chia ảnh nhỏ → detect → gộp
+  benchmark()        → Đo FPS (tốc độ inference)
+```
+
+**SAHI hoạt động thế nào?**
+```
+Ảnh gốc 1920x1080 (lửa rất nhỏ ở góc → model thường BỎ SÓT)
+┌────────────────────────────────────────┐
+│                              🔥 ← nhỏ  │
+│                               (10x10px)│
+│    Hẻm nhỏ rất dài                    │
+│                                        │
+└────────────────────────────────────────┘
+              │
+              ▼ SAHI chia thành patches 320x320 (overlap 20%)
+┌──────┬──────┬──────┬──────┬──────┬──────┐
+│      │      │      │      │      │  🔥  │ ← Trong patch nhỏ,
+│      │      │      │      │      │      │   lửa chiếm nhiều
+│      │      │      │      │      │      │   pixel hơn → DỄ
+├──────┼──────┼──────┼──────┼──────┼──────┤   PHÁT HIỆN!
+│      │      │      │      │      │      │
+│      │      │      │      │      │      │
+└──────┴──────┴──────┴──────┴──────┴──────┘
+              │
+              ▼ Detect trên TỪNG patch → gộp kết quả
+         Tìm thấy Fire! ✅
+```
+
+---
+
+#### 📄 [src/engine/trainer.py](file:///Users/springwang/Library/Mobile%20Documents/com~apple~CloudDocs/juniorYear/DeepLearning/Final_523H0173_523H0178/src/engine/trainer.py) — 3-Stage Training Pipeline
+[Mở file](file:///Users/springwang/Library/Mobile%20Documents/com~apple~CloudDocs/juniorYear/DeepLearning/Final_523H0173_523H0178/src/engine/trainer.py)
+
+```
+VAI TRÒ: Quản lý QUY TRÌNH training 3 giai đoạn.
+
+TƯƠNG TỰ HỌC ĐẠI HỌC:
+  Năm 1 (Baseline):     Học kiến thức nền tảng
+  Năm 2 (Hard Neg):     Học phân biệt cái dễ nhầm
+  Năm 3 (SAHI):         Thực tập, tình huống thực tế
+```
+
+```
+STAGE 1: BASELINE ──────────────────────────────────
+  Data:    01_Positive + 02_Alley
+  Weights: COCO pretrained (đã biết nhận dạng 80 vật thể)
+  LR:      1e-4 (cao, vì học mới nhiều)
+  Epochs:  80
+  Kết quả: best.pt (model biết nhận lửa/khói cơ bản)
+              │
+              ▼ Load weights
+STAGE 2: HARD NEGATIVE ─────────────────────────────
+  Data:    01 + 02 + 03_Negative (THÊM mẫu khó)
+  Weights: best.pt từ Stage 1
+  LR:      5e-5 (NHỎ HƠN, vì chỉ tinh chỉnh)
+  Epochs:  50
+  Kết quả: best.pt mới (KHÔNG nhầm hơi phở = khói)
+              │
+              ▼ Load weights
+STAGE 3: SAHI ──────────────────────────────────────
+  Data:    04_SAHI + 05_Real
+  Weights: best.pt từ Stage 2
+  LR:      2e-5 (RẤT NHỎ, tinh chỉnh cuối)
+  Epochs:  30
+  Kết quả: FINAL best.pt (phát hiện lửa nhỏ/xa) 🎉
+```
+
+---
+
+#### 📄 [src/engine/evaluator.py](file:///Users/springwang/Library/Mobile%20Documents/com~apple~CloudDocs/juniorYear/DeepLearning/Final_523H0173_523H0178/src/engine/evaluator.py) — Đánh giá model
+[Mở file](file:///Users/springwang/Library/Mobile%20Documents/com~apple~CloudDocs/juniorYear/DeepLearning/Final_523H0173_523H0178/src/engine/evaluator.py)
+
+```
+VAI TRÒ: Đo "model học được bao nhiêu điểm?"
+
+CÁC METRIC:
+  ┌─────────────┬──────────────────────────────────────────┐
+  │ Metric      │ Ý nghĩa (ví dụ 100 ảnh có lửa thật)    │
+  ├─────────────┼──────────────────────────────────────────┤
+  │ Precision   │ Model nói "lửa!" 90 lần, đúng 80 lần    │
+  │ = 80/90     │ → Precision = 89% (ít false alarm)      │
+  │             │                                          │
+  │ Recall      │ 100 đám cháy thật, model tìm thấy 82    │
+  │ = 82/100    │ → Recall = 82% (ít bỏ sót)              │
+  │             │                                          │
+  │ F1          │ Trung bình hài hòa P và R                │
+  │             │ → F1 = 85% (cân bằng)                    │
+  │             │                                          │
+  │ mAP@50      │ "Hộp bbox overlap ≥ 50% = đúng"         │
+  │             │ → Trung bình AP của Fire + Smoke         │
+  │             │                                          │
+  │ FPS         │ Bao nhiêu ảnh/giây → Target: ≥ 25       │
+  └─────────────┴──────────────────────────────────────────┘
+```
+
+---
+
+### ── PHASE 5: TIỆN ÍCH ──
+
+#### 📄 [src/utils/visualization.py](file:///Users/springwang/Library/Mobile%20Documents/com~apple~CloudDocs/juniorYear/DeepLearning/Final_523H0173_523H0178/src/utils/visualization.py) — Vẽ kết quả
+[Mở file](file:///Users/springwang/Library/Mobile%20Documents/com~apple~CloudDocs/juniorYear/DeepLearning/Final_523H0173_523H0178/src/utils/visualization.py)
+
+```
+VAI TRÒ: Vẽ bounding box lên ảnh + vẽ biểu đồ training.
+
+  draw_detections()       → Vẽ bbox + label lên ảnh
+  draw_detections_fancy() → Vẽ bbox + vùng tô bán trong suốt (đẹp hơn)
+  plot_training_curves()  → Vẽ loss, mAP, P/R theo epochs
+  create_detection_video()→ Xử lý video frame-by-frame
+```
+
+---
+
+#### 📄 [src/utils/alert.py](file:///Users/springwang/Library/Mobile%20Documents/com~apple~CloudDocs/juniorYear/DeepLearning/Final_523H0173_523H0178/src/utils/alert.py) — Hệ thống cảnh báo
+[Mở file](file:///Users/springwang/Library/Mobile%20Documents/com~apple~CloudDocs/juniorYear/DeepLearning/Final_523H0173_523H0178/src/utils/alert.py)
+
+```
+VAI TRÒ: Gửi cảnh báo khi phát hiện cháy.
+
+LOGIC CẢNH BÁO (tránh false alarm):
+
+  Frame 1: Fire 80% ──► count=1 ──► Chưa báo (có thể nhầm)
+  Frame 2: Fire 90% ──► count=2 ──► Chưa báo
+  Frame 3: Fire 85% ──► count=3 ──► 🚨 CẢNH BÁO!
+                                        │
+                          ┌──────────────┼──────────────┐
+                          ▼              ▼              ▼
+                     🔊 Còi hú     📱 Telegram    📞 SMS
+                                   (ảnh + vị trí) (số ĐT)
+                                        │
+                                        ▼
+                          ⏳ Cooldown 60 giây (tránh spam)
+                                        │
+  Frame 100: không detect ──► count=0 ──► Reset
+```
+
+---
+
+### ── PHASE 6: WEB + PWA (Triển khai) ──
+
+#### 📄 [web/main.py](file:///Users/springwang/Library/Mobile%20Documents/com~apple~CloudDocs/juniorYear/DeepLearning/Final_523H0173_523H0178/web/main.py) — FastAPI Server
+[Mở file](file:///Users/springwang/Library/Mobile%20Documents/com~apple~CloudDocs/juniorYear/DeepLearning/Final_523H0173_523H0178/web/main.py)
+
+```
+VAI TRÒ: Server nhận ảnh từ iPhone → chạy model → trả kết quả.
+
+LUỒNG REQUEST:
+  iPhone Safari ──HTTP POST──► FastAPI Server
+  (gửi ảnh)                    │
+                               ▼
+                         Load model (1 lần khi start)
+                               │
+                               ▼
+                    ┌──── API Endpoints ────┐
+                    │                       │
+            /api/detect              /api/detect-image
+            (trả JSON)              (trả ẢNH có bbox)
+                    │                       │
+                    ▼                       ▼
+    {                           ┌──────────────┐
+      "detections": [           │  ảnh + bbox  │
+        {                       │  🔥 Fire 92% │
+          "class": "Fire",      │              │
+          "confidence": 0.92    └──────────────┘
+        }
+      ]
+    }
+```
+
+---
+
+#### 📄 [web/static/index.html](file:///Users/springwang/Library/Mobile%20Documents/com~apple~CloudDocs/juniorYear/DeepLearning/Final_523H0173_523H0178/web/static/index.html) — Giao diện PWA
+[Mở file](file:///Users/springwang/Library/Mobile%20Documents/com~apple~CloudDocs/juniorYear/DeepLearning/Final_523H0173_523H0178/web/static/index.html)
+
+```
+VAI TRÒ: Giao diện người dùng trên iPhone.
+
+3 TAB:
+  ┌─────────────┬─────────────┬─────────────┐
+  │ 📷 Camera   │ 📤 Upload   │ 📊 Kết quả  │
+  ├─────────────┼─────────────┼─────────────┤
+  │Camera iPhone│ Chọn ảnh    │ Danh sách   │
+  │realtime     │ từ thư viện │ detections  │
+  │auto-detect  │ hoặc chụp   │ + alert     │
+  │mỗi 2 giây  │             │ banner      │
+  └─────────────┴─────────────┴─────────────┘
+
+FLOW MỞ CAMERA:
+  User nhấn "Bật Camera"
+       │
+       ▼
+  navigator.mediaDevices.getUserMedia()  ← API trình duyệt
+       │
+       ▼ (Safari hỏi quyền camera)
+  Video stream hiển thị
+       │
+       ▼ (User nhấn "Chụp & Detect" hoặc bật "Tự động")
+  canvas.drawImage(video) → chụp 1 frame
+       │
+       ▼
+  canvas.toBlob() → tạo file ảnh JPEG
+       │
+       ▼
+  fetch('/api/detect', { body: formData }) → gửi lên server
+       │
+       ▼
+  Nhận JSON kết quả → hiển thị alert + chi tiết
+```
+
+---
+
+#### 📄 [web/static/manifest.json](file:///Users/springwang/Library/Mobile%20Documents/com~apple~CloudDocs/juniorYear/DeepLearning/Final_523H0173_523H0178/web/static/manifest.json) — Khai báo PWA
+[Mở file](file:///Users/springwang/Library/Mobile%20Documents/com~apple~CloudDocs/juniorYear/DeepLearning/Final_523H0173_523H0178/web/static/manifest.json)
+
+```
+VAI TRÒ: Nói với iOS/Android "đây là app, không phải web thường"
+
+  name: "Phát hiện Cháy Sớm"  → Tên app trên Home Screen
+  short_name: "FireDetect"      → Tên ngắn dưới icon
+  display: "standalone"         → Chạy toàn màn hình (ẩn URL bar)
+  background_color: "#0a0a1a"   → Màu nền splash screen
+  theme_color: "#ff4444"        → Màu thanh status bar
+  icons: [...]                  → Icon app trên Home Screen
+```
+
+---
+
+#### 📄 [web/static/sw.js](file:///Users/springwang/Library/Mobile%20Documents/com~apple~CloudDocs/juniorYear/DeepLearning/Final_523H0173_523H0178/web/static/sw.js) — Service Worker
+[Mở file](file:///Users/springwang/Library/Mobile%20Documents/com~apple~CloudDocs/juniorYear/DeepLearning/Final_523H0173_523H0178/web/static/sw.js)
+
+```
+VAI TRÒ: Script chạy NỀN trong browser.
+         Cache files → app mở nhanh, hoạt động offline.
+
+TƯƠNG TỰ: Giống "nhân viên kho" ở siêu thị:
+  - Lần đầu mua hàng → lấy từ kho gốc (server)
+  - Lần sau → lấy từ kệ gần (cache) → NHANH HƠN
+  - Hết hàng trên kệ → lấy từ kho gốc
+
+LOGIC:
+  Request đến ──► Static file?
+                    │
+              ┌─────┴─────┐
+              ▼           ▼
+          Có cache?    API request?
+           (kệ gần)   (/api/*)
+              │           │
+         ┌────┴────┐      ▼
+         ▼         ▼   Luôn fetch
+     Trả cache  Fetch   từ server
+     (nhanh)   server   (cần data
+               + cache    mới nhất)
+               cho lần
+               sau
+```
+
+---
+
+### ── PHASE 7: NOTEBOOK ──
+
+#### 📓 [notebooks/FireDetection_Training.ipynb](file:///Users/springwang/Library/Mobile%20Documents/com~apple~CloudDocs/juniorYear/DeepLearning/Final_523H0173_523H0178/notebooks/FireDetection_Training.ipynb)
+[Mở file](file:///Users/springwang/Library/Mobile%20Documents/com~apple~CloudDocs/juniorYear/DeepLearning/Final_523H0173_523H0178/notebooks/FireDetection_Training.ipynb)
+
+```
+VAI TRÒ: Notebook Jupyter chạy từng bước.
+         Dùng trên Google Colab (miễn phí GPU) hoặc local.
+
+THỨ TỰ CELL:
+  Cell 1: Cài dependencies
+  Cell 2: Load config
+  Cell 3: Thống kê dataset (bao nhiêu ảnh, phân bố class)
+  Cell 4: Validate labels
+  Cell 5: Visualize mẫu ảnh
+  Cell 6: Khởi tạo model + trainer
+  Cell 7: 🥇 Stage 1 Baseline
+  Cell 8: 🥈 Stage 2 Hard Negative
+  Cell 9: 🥉 Stage 3 SAHI
+  Cell 10: Đánh giá model
+  Cell 11: Vẽ training curves
+  Cell 12: Benchmark FPS
+  Cell 13: Inference test
+  Cell 14: SAHI inference
+```
+
+---
+
+## 🔄 Luồng hoàn chỉnh — Từ lúc bắt đầu đến lúc demo
+
+```
+BẠN LÀM GÌ                         FILE NÀO LIÊN QUAN
+──────────────                      ──────────────────
+1. Clone repo + cài thư viện     → requirements.txt
+                                    
+2. Thu thập ảnh lửa, khói, hẻm  → data/01_*/ đến data/05_*/
+   (Kaggle, tự chụp, tin tức)      
+                                    
+3. Gán nhãn bằng LabelImg       → data/*/labels/*.txt
+   (vẽ bbox → save YOLO format)    
+                                    
+4. Kiểm tra data                 → src/data/preprocessing.py
+   (labels đúng? ảnh OK? trùng?)   
+                                    
+5. Sửa config nếu cần            → configs/default.yaml
+   (epochs, batch_size, LR)         
+                                    
+6. Mở notebook + chạy training   → notebooks/FireDetection_Training.ipynb
+   hoặc CLI:                        src/data/dataset.py (chuẩn bị data)
+   python -m src.engine.trainer     src/data/augmentation.py (augment)
+                                    src/models/rtdetr_model.py (model)
+                                    src/engine/trainer.py (3 stages)
+                                    
+7. Xem kết quả training          → src/engine/evaluator.py
+   (mAP, confusion matrix)         src/utils/visualization.py
+                                    
+8. Chạy web server               → web/main.py (FastAPI)
+   uvicorn web.main:app             web/static/index.html (UI)
+                                    web/static/manifest.json (PWA)
+                                    web/static/sw.js (offline)
+                                    
+9. Mở Safari iPhone              → Nhập http://<IP>:8000
+   → Add to Home Screen            manifest.json tạo icon app
+   → Bật camera → detect!          index.html camera API
+                                    main.py /api/detect xử lý
+                                    
+10. Demo cho giảng viên! 🎉
+```
+
+---
+
+## ❓ Câu hỏi thường gặp
+
+> [!TIP]
+> **Q: Tại sao không dùng YOLOv8 mà dùng RT-DETR?**
+> A: RT-DETR không cần NMS (Non-Maximum Suppression) → nhanh hơn ở bước post-processing. Và RT-DETR dùng Transformer → hiểu ngữ cảnh tốt hơn (biết phân biệt lửa vs đèn đỏ dựa vào xung quanh).
+
+> [!TIP]
+> **Q: Tại sao chia 3 stages mà không train 1 lần?**
+> A: Giống học tiếng Anh — học từ vựng cơ bản trước, rồi mới học từ khó, rồi mới luyện đề. Nếu trộn tất cả → model bị "overwhelmed", không phân biệt được cái nào quan trọng trước.
+
+> [!TIP]
+> **Q: Cần bao nhiêu ảnh để model tốt?**
+> A: Tối thiểu ~200-500 ảnh mỗi folder. Càng nhiều càng tốt. Folder 01 (Positive) nên nhiều nhất (~1000+). Folder 03 (Negative) cũng cần nhiều (~500+) để giảm false positive.
+
+> [!TIP]
+> **Q: Không có GPU NVIDIA thì sao?**
+> A: Dùng Google Colab miễn phí (có GPU T4). Upload notebook lên Colab + mount Google Drive chứa data.
