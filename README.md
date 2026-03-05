@@ -427,7 +427,7 @@ Key hyperparameters in `configs/default.yaml`:
 | Name | Student ID | Contact |
 |---|---|---|
 | Vo Xuan Quang | 523H0173 | 523H0173@student.tdtu.edu.vn |
-| *(teammate name)* | *(ID)* | *(email)* |
+| Hoang Xuan Thanh | 523H0178 | 523H0178@student.tdtu.edu.vn |
 
 **Institution:** Ton Duc Thang University (TDTU) — Trường Đại học Tôn Đức Thắng
 
@@ -439,7 +439,7 @@ This project is developed for **academic purposes** at Ton Duc Thang University.
 *Dự án được phát triển cho mục đích học thuật tại Trường ĐH Tôn Đức Thắng.*
 
 ```
-Copyright (c) 2026 Vo Xuan Quang & Team
+Copyright (c) 2026 Vo Xuan Quang & Hoang Xuan Thanh
 Academic use only — not for commercial redistribution.
 ```
 
