@@ -1,0 +1,59 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+*.egg
+
+# Virtual environments
+venv/
+env/
+.env
+.venv/
+
+# Model weights
+*.pt
+*.pth
+*.onnx
+*.torchscript
+
+# Training runs & outputs
+runs/
+checkpoints/
+logs/
+
+# Dataset (download separately — see data/README.md)
+data/01_Positive_Standard/
+data/02_Alley_Context/
+data/03_Negative_Hard_Samples/
+data/04_SAHI_Small_Objects/
+data/05_Real_Situation/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb_checkpoints/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+.dockerignore
+
+# Misc
+*.log
+*.csv
+*.json
+tmp/
+temp/
