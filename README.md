@@ -9,7 +9,7 @@
 [![License](https://img.shields.io/badge/License-Academic-green)](LICENSE)
 [![SAHI](https://img.shields.io/badge/SAHI-Slicing%20Inference-purple)](https://github.com/obss/sahi)
 
-*Phát hiện lửa và khói sớm trong các hẻm nhỏ tại TP. Hồ Chí Minh*
+*This project focuses on building an AI surveillance system for the early detection of fires in small alleys—areas characterized by high population density and limited access for traditional fire trucks in Ho Chi Minh City*
 
 [Live Demo](#live-demo) • [Dataset](#dataset-structure) • [Architecture](#model-architecture) • [Getting Started](#getting-started) • [Authors](#authors)
 
