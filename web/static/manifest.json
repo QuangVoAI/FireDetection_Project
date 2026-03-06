@@ -1,30 +1,82 @@
 {
-    "name": "Phát hiện Cháy Sớm",
+    "id": "/",
+    "name": "Phát hiện Cháy Sớm — AI Fire Detection",
     "short_name": "FireDetect",
-    "description": "Hệ thống AI phát hiện lửa và khói trong thời gian thực",
+    "description": "Hệ thống AI phát hiện lửa và khói trong thời gian thực sử dụng RT-DETR + SAHI",
     "start_url": "/",
+    "scope": "/",
     "display": "standalone",
     "orientation": "portrait",
     "background_color": "#0a0a1a",
     "theme_color": "#ff4444",
     "icons": [
         {
+            "src": "/static/favicon.png",
+            "sizes": "32x32",
+            "type": "image/png"
+        },
+        {
+            "src": "/static/icon-72.png",
+            "sizes": "72x72",
+            "type": "image/png"
+        },
+        {
+            "src": "/static/icon-96.png",
+            "sizes": "96x96",
+            "type": "image/png"
+        },
+        {
+            "src": "/static/icon-128.png",
+            "sizes": "128x128",
+            "type": "image/png"
+        },
+        {
+            "src": "/static/icon-144.png",
+            "sizes": "144x144",
+            "type": "image/png"
+        },
+        {
+            "src": "/static/icon-152.png",
+            "sizes": "152x152",
+            "type": "image/png"
+        },
+        {
             "src": "/static/icon-192.png",
             "sizes": "192x192",
             "type": "image/png",
-            "purpose": "any maskable"
+            "purpose": "any"
+        },
+        {
+            "src": "/static/icon-384.png",
+            "sizes": "384x384",
+            "type": "image/png",
+            "purpose": "any"
         },
         {
             "src": "/static/icon-512.png",
             "sizes": "512x512",
             "type": "image/png",
-            "purpose": "any maskable"
+            "purpose": "any"
+        },
+        {
+            "src": "/static/icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "maskable"
+        },
+        {
+            "src": "/static/icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
         }
     ],
     "categories": [
         "utilities",
-        "safety"
+        "safety",
+        "education"
     ],
     "lang": "vi",
-    "dir": "ltr"
+    "dir": "ltr",
+    "prefer_related_applications": false
 }

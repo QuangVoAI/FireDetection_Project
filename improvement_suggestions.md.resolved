@@ -1,0 +1,528 @@
+# 🚀 Gợi ý Cải tiến — Xu hướng AI 2025-2026
+
+> [!IMPORTANT]
+> Mỗi gợi ý được đánh giá theo **Độ khó** (⭐ dễ → ⭐⭐⭐⭐⭐ khó) và **Impact** (điểm cộng khi trình bày đồ án). Mình xếp theo thứ tự **nên làm trước → nâng cao → tầm nhìn xa**.
+
+---
+
+## 📊 Tổng quan nhanh
+
+| # | Cải tiến | Độ khó | Impact | Xu hướng |
+|---|---|---|---|---|
+| 1 | 🧠 Grad-CAM (Giải thích AI) | ⭐⭐ | 🔥🔥🔥🔥🔥 | Explainable AI (XAI) |
+| 2 | 🎬 Phân tích Video (CNN+LSTM) | ⭐⭐⭐ | 🔥🔥🔥🔥🔥 | Spatiotemporal |
+| 3 | 📱 On-Device Inference (CoreML) | ⭐⭐⭐ | 🔥🔥🔥🔥 | Edge AI |
+| 4 | 🏫 Knowledge Distillation | ⭐⭐⭐ | 🔥🔥🔥🔥 | Model Compression |
+| 5 | 🎨 GAN Data Augmentation | ⭐⭐ | 🔥🔥🔥 | Generative AI |
+| 6 | 📊 Confidence Calibration | ⭐⭐ | 🔥🔥🔥 | Reliable AI |
+| 7 | 🌡️ Multi-Modal Fusion | ⭐⭐⭐⭐ | 🔥🔥🔥🔥🔥 | Sensor Fusion |
+| 8 | ⚠️ Risk Scoring (Mức độ nguy hiểm) | ⭐⭐ | 🔥🔥🔥🔥 | Decision AI |
+| 9 | 🎯 RT-DETR v2 Upgrade | ⭐ | 🔥🔥🔥 | Latest Model |
+| 10 | 🔮 Dự đoán lan tỏa lửa | ⭐⭐⭐⭐⭐ | 🔥🔥🔥🔥🔥 | Predictive AI |
+
+---
+
+## 🟢 NHÓM A: NÊN LÀM NGAY (Ghi điểm cao, khả thi)
+
+---
+
+### 1. 🧠 Grad-CAM — "Tại sao AI nói đây là lửa?"
+
+````carousel
+**Vấn đề hiện tại:**
+Model nói "Fire 92%" nhưng KHÔNG giải thích TẠI SAO.
+Giảng viên sẽ hỏi: "Làm sao biết model nhìn đúng chỗ?"
+
+**Giải pháp: Grad-CAM (Gradient-weighted Class Activation Mapping)**
+Tạo "heatmap" hiển thị model đang TẬP TRUNG vào đâu trong ảnh.
+
+```
+Ảnh gốc                    Grad-CAM heatmap
+┌──────────────────┐       ┌──────────────────┐
+│    ┌────┐        │       │    ┌────┐        │
+│    │ 🔥 │        │  ──►  │    │🟥🟥│        │ ← model nhìn đúng
+│    └────┘        │       │    └────┘        │    vào vùng lửa ✅
+│   xe máy   mèo  │       │   🟦🟦   🟦🟦  │ ← KHÔNG nhìn xe/mèo
+└──────────────────┘       └──────────────────┘
+Đỏ = model tập trung mạnh    Xanh = model bỏ qua
+```
+
+> Đây là **xu hướng Explainable AI (XAI)** — cực kỳ quan trọng trong 2025-2026, đặc biệt cho hệ thống an toàn.
+<!-- slide -->
+**Code mẫu — Thêm vào `src/utils/visualization.py`:**
+```python
+import torch
+import numpy as np
+import cv2
+
+def generate_gradcam(model, image, target_layer='backbone.layer4'):
+    """
+    Tạo Grad-CAM heatmap.
+    
+    NGUYÊN LÝ:
+      1. Forward pass → lấy feature map tại target_layer
+      2. Backward pass → tính gradient
+      3. Global average pooling gradient → weights
+      4. Weighted sum feature maps → heatmap
+      5. ReLU → chỉ giữ vùng đóng góp TÍCH CỰC
+    """
+    activations = {}
+    gradients = {}
+    
+    # Hook để bắt feature maps + gradients
+    def forward_hook(module, input, output):
+        activations['value'] = output.detach()
+    
+    def backward_hook(module, grad_in, grad_out):
+        gradients['value'] = grad_out[0].detach()
+    
+    # Đăng ký hook tại layer cuối backbone
+    layer = dict(model.named_modules())[target_layer]
+    fh = layer.register_forward_hook(forward_hook)
+    bh = layer.register_full_backward_hook(backward_hook)
+    
+    # Forward + Backward
+    output = model(image)
+    output.max().backward()
+    
+    # Tính heatmap
+    weights = gradients['value'].mean(dim=[2, 3], keepdim=True)
+    heatmap = (weights * activations['value']).sum(dim=1, keepdim=True)
+    heatmap = torch.relu(heatmap)
+    heatmap = heatmap.squeeze().cpu().numpy()
+    
+    # Normalize 0-255
+    heatmap = cv2.normalize(heatmap, None, 0, 255, cv2.NORM_MINMAX)
+    heatmap = cv2.resize(heatmap.astype(np.uint8), (image.shape[3], image.shape[2]))
+    heatmap = cv2.applyColorMap(heatmap, cv2.COLORMAP_JET)
+    
+    fh.remove()
+    bh.remove()
+    
+    return heatmap
+
+def overlay_gradcam(original_img, heatmap, alpha=0.4):
+    """Chồng heatmap lên ảnh gốc."""
+    return cv2.addWeighted(original_img, 1 - alpha, heatmap, alpha, 0)
+```
+
+**Độ khó:** ⭐⭐ (< 1 ngày) — Thêm 1 file mới, không ảnh hưởng code cũ
+````
+
+---
+
+### 2. 🎬 Phân tích Video theo Thời gian (CNN + LSTM)
+
+````carousel
+**Vấn đề hiện tại:**
+Model detect TỪNG FRAME độc lập. Không biết:
+- Frame trước có lửa không?
+- Lửa đang LỚN DẦN hay TẮT DẦN?
+- Tần suất xuất hiện liên tiếp?
+
+**Giải pháp: Thêm LSTM phân tích chuỗi frames**
+
+```
+Hiện tại (frame-by-frame):
+  F1: Fire 30% → ❌ bỏ qua
+  F2: Fire 80% → ✅ phát hiện  
+  F3: Fire 20% → ❌ bỏ qua    ← Bỏ sót! Lửa bị che tạm thời
+  F4: Fire 70% → ✅ phát hiện
+
+Cải tiến (temporal analysis):
+  F1→F2→F3→F4 → LSTM phân tích chuỗi → "Lửa đang cháy lan" 🔥
+  Dù F3 thấp → LSTM nhớ F1,F2 cao → vẫn cảnh báo ✅
+```
+
+> **Xu hướng 2025:** Spatiotemporal models (CNN+LSTM/GRU) được nghiên cứu nhiều nhất trong fire detection, vì lửa là hiện tượng ĐỘNG, không phải ảnh TĨNH.
+<!-- slide -->
+**Kiến trúc đề xuất:**
+```
+                     ┌─────────────┐
+  Frame t-4 ──► RT-DETR ──► Features ──┐
+  Frame t-3 ──► RT-DETR ──► Features ──┤
+  Frame t-2 ──► RT-DETR ──► Features ──┼──► LSTM ──► "LỬA ĐANG LAN"
+  Frame t-1 ──► RT-DETR ──► Features ──┤          (confidence tổng hợp)
+  Frame t   ──► RT-DETR ──► Features ──┘
+
+  RT-DETR: trích xuất đặc trưng TỪ ẢNH (spatial)
+  LSTM:    phân tích THAY ĐỔI THEO THỜI GIAN (temporal)
+```
+
+**Code mẫu — `src/models/temporal_model.py`:**
+```python
+import torch
+import torch.nn as nn
+
+class TemporalFireAnalyzer(nn.Module):
+    """
+    Phân tích chuỗi detections theo thời gian.
+    
+    Input:  Sequence of detection features [batch, seq_len, feature_dim]
+    Output: Fire probability tổng hợp  [batch, num_classes]
+    """
+    def __init__(self, feature_dim=7, hidden_dim=64, num_layers=2):
+        super().__init__()
+        
+        # LSTM nhận chuỗi features
+        self.lstm = nn.LSTM(
+            input_size=feature_dim, # [conf, x, y, w, h, class, area]
+            hidden_size=hidden_dim,
+            num_layers=num_layers,
+            batch_first=True,
+            dropout=0.3,
+        )
+        
+        # Classifier
+        self.classifier = nn.Sequential(
+            nn.Linear(hidden_dim, 32),
+            nn.ReLU(),
+            nn.Dropout(0.2),
+            nn.Linear(32, 3),  # [safe, fire_growing, fire_stable]
+        )
+    
+    def forward(self, x):
+        lstm_out, _ = self.lstm(x)
+        last_hidden = lstm_out[:, -1, :]  # Lấy output cuối
+        return self.classifier(last_hidden)
+```
+
+**Độ khó:** ⭐⭐⭐ (2-3 ngày) — Cần thu thập video training
+````
+
+---
+
+### 3. ⚠️ Risk Scoring — Đánh giá Mức độ Nguy hiểm
+
+````carousel
+**Vấn đề hiện tại:**
+Model chỉ nói "Fire" hoặc "Smoke". Không phân biệt:
+- Lửa nhỏ vừa bốc (can dập) vs Cháy lớn (phải chạy!)
+- Khói mỏng (theo dõi) vs Khói đen dày (nguy hiểm!)
+
+**Giải pháp: Risk Score 1-10**
+
+```
+┌────────────────────────────────────────────────┐
+│              RISK SCORING                       │
+│                                                 │
+│  Input: detections từ RT-DETR                   │
+│                                                 │
+│  Yếu tố đánh giá:                              │
+│  ├── Kích thước bbox (lớn = nguy hiểm hơn)     │
+│  ├── Số lượng objects (nhiều = lan rộng)        │
+│  ├── Class (Fire > Smoke)                       │
+│  ├── Confidence (cao = chắc chắn hơn)          │
+│  ├── Vị trí (gần trung tâm = gần camera)       │
+│  └── Tốc độ lan (LSTM temporal)                 │
+│                                                 │
+│  Output:                                        │
+│  ├── Level 1-3 🟢 THEO DÕI (khói nhẹ)          │
+│  ├── Level 4-6 🟡 CẢNH BÁO (lửa nhỏ)          │
+│  └── Level 7-10 🔴 KHẨN CẤP (cháy lớn!)       │
+└────────────────────────────────────────────────┘
+```
+<!-- slide -->
+**Code mẫu — `src/utils/risk_score.py`:**
+```python
+def calculate_risk_score(detections, image_size):
+    """
+    Tính risk score 1-10 từ detections.
+    
+    Công thức:
+      score = w1*area_ratio + w2*count + w3*max_conf + w4*has_fire
+    """
+    if not detections:
+        return 0, "SAFE"
+    
+    img_area = image_size[0] * image_size[1]
+    
+    # Tính yếu tố
+    total_area = sum(
+        (d['bbox'][2] - d['bbox'][0]) * (d['bbox'][3] - d['bbox'][1])
+        for d in detections
+    ) / img_area  # normalize
+    
+    count = len(detections)
+    max_conf = max(d['confidence'] for d in detections)
+    has_fire = any(d['class_name'] == 'Fire' for d in detections)
+    
+    # Weighted score
+    score = (
+        total_area * 3.0 +      # Diện tích chiếm bao nhiêu
+        min(count / 5, 1) * 2.0 + # Số objects (cap ở 5)
+        max_conf * 2.0 +          # Confidence cao nhất
+        (3.0 if has_fire else 1.0) # Lửa nguy hiểm hơn khói
+    )
+    
+    # Normalize 1-10
+    risk = min(max(int(score), 1), 10)
+    
+    # Level
+    if risk <= 3:
+        level = "🟢 THEO DÕI"
+    elif risk <= 6:
+        level = "🟡 CẢNH BÁO"  
+    else:
+        level = "🔴 KHẨN CẤP"
+    
+    return risk, level
+```
+
+**Độ khó:** ⭐⭐ (< 1 ngày) — Logic đơn giản, impact cao khi demo
+````
+
+---
+
+### 4. 🎯 Nâng cấp RT-DETR v2
+
+```
+Vấn đề: Đang dùng RT-DETR v1 (2023)
+Cải tiến: RT-DETR v2 (2024) có:
+  - +2.2% mAP (55.3% trên COCO)
+  - Selective Multi-Scale Feature → detect nhỏ/lớn tốt hơn
+  - Discrete Sampling → deploy edge device dễ hơn
+  - Bag-of-Freebies → train tốt hơn, không chậm inference
+
+CÁC LÀM:
+  Chỉ cần đổi 1 dòng trong default.yaml:
+    architecture: "rtdetr-v2-l"   # thay vì "rtdetr-l"
+  
+  Ultralytics đã hỗ trợ RT-DETR v2!
+```
+
+**Độ khó:** ⭐ (5 phút!) — Thay đổi config, không sửa code
+
+---
+
+## 🟡 NHÓM B: NÂNG CAO (Nổi bật so với đồ án khác)
+
+---
+
+### 5. 📱 On-Device Inference — Chạy AI trên iPhone (không cần server!)
+
+````carousel
+**Vấn đề hiện tại:**
+```
+iPhone ──► WiFi ──► Server (detect) ──► WiFi ──► iPhone
+                    ^
+           Cần server LUÔN chạy
+           Phụ thuộc WiFi
+           Delay 200-500ms
+```
+
+**Cải tiến: Chạy model TRỰC TIẾP trên iPhone!**
+```
+iPhone ──► CoreML/ONNX Runtime ──► Kết quả ngay
+          (Neural Engine A16/A17)
+          KHÔNG CẦN WiFi ✅
+          KHÔNG CẦN SERVER ✅  
+          Delay < 30ms 🚀
+```
+
+> **Xu hướng Edge AI 2025:** Apple Neural Engine trên iPhone 15/16 mạnh đủ chạy model detect ở 60+ FPS!
+<!-- slide -->
+**Cách implement:**
+```python
+# Bước 1: Export model sang CoreML
+from ultralytics import RTDETR
+
+model = RTDETR('runs/train/best.pt')
+
+# Export sang CoreML (dùng được trên iPhone)
+model.export(format='coreml', imgsz=640)
+# → Tạo file best.mlpackage
+
+# Export sang ONNX (chạy được ở mọi device)
+model.export(format='onnx', imgsz=640, simplify=True)
+# → Tạo file best.onnx
+```
+
+```
+Bước 2: Tích hợp vào PWA (dùng ONNX Runtime Web)
+  - onnxruntime-web chạy model ngay trong browser
+  - Dùng WebGL/WebGPU để accelerate
+  - Không cần native app, vẫn chạy trên Safari!
+```
+
+**Độ khó:** ⭐⭐⭐ (3-5 ngày) — Export dễ, tích hợp web cần thêm code
+````
+
+---
+
+### 6. 🏫 Knowledge Distillation — "Thầy dạy Trò"
+
+```
+Vấn đề: RT-DETR-L lớn (32M params) → chậm trên mobile
+Giải pháp: Train model NHỎ hơn, học từ model LỚN
+
+  ┌──────────────────┐         ┌──────────────────┐
+  │  RT-DETR-L (Thầy)│         │  RT-DETR-S (Trò) │
+  │  32M params      │  dạy   │  10M params       │
+  │  mAP 72%         │  ───►  │  mAP 68% → 70%   │
+  │  15 FPS          │         │  45 FPS! 🚀      │
+  └──────────────────┘         └──────────────────┘
+  
+  Model Trò NHỎ hơn 3x nhưng gần bằng chất lượng Thầy!
+  → Deploy trên iPhone NHANH hơn nhiều.
+
+FLOW:
+  1. Train model Thầy (RT-DETR-L) bình thường → best.pt
+  2. Train model Trò (RT-DETR-S) với loss = 
+     α * loss_thường + (1-α) * KL_divergence(Trò, Thầy)
+  3. Trò học cách "suy nghĩ" của Thầy, không chỉ học data
+```
+
+**Độ khó:** ⭐⭐⭐ (2-3 ngày) — Cần viết custom training loop
+
+---
+
+### 7. 🎨 GAN Data Augmentation — AI tạo thêm data
+
+```
+Vấn đề: Thiếu data cháy trong hẻm TPHCM (hiếm!)
+Giải pháp: Dùng Stable Diffusion tạo ảnh synthetic
+
+  Prompt: "fire in narrow alley in Ho Chi Minh City, 
+           motorcycles parked, night time, smoke"
+              │
+              ▼
+  Stable Diffusion → Ảnh giả nhưng REALISTIC
+              │
+              ▼
+  Gán nhãn → Thêm vào training set
+
+MẸO: Dùng ControlNet + img2img:
+  1. Chụp ảnh hẻm thật (không có lửa)
+  2. Dùng AI "thêm lửa" vào ảnh
+  3. → Data realistic + bối cảnh TPHCM thật
+
+CÔNG CỤ MIỄN PHÍ:
+  - Google Colab + Stable Diffusion WebUI
+  - Hoặc dùng API: stability.ai (free tier)
+```
+
+**Độ khó:** ⭐⭐ (1-2 ngày) — Dùng công cụ có sẵn, không cần train GAN
+
+---
+
+### 8. 📊 Confidence Calibration — AI tự tin ĐÚNG MỨC
+
+```
+Vấn đề: Model nói "Fire 95%" nhưng thực tế chỉ đúng 70%!
+         → Confidence KHÔNG phản ánh xác suất thật.
+
+Giải pháp: Temperature Scaling
+
+  Trước calibration:         Sau calibration:
+  Fire 95% → đúng 70%       Fire 72% → đúng 72% ✅
+  Fire 60% → đúng 55%       Fire 56% → đúng 56% ✅
+  
+  Reliability Diagram:
+  ┌────────────────────┐     ┌────────────────────┐
+  │     ╱              │     │          ╱         │
+  │   ╱  ← lệch!      │     │        ╱  ← khớp! │
+  │ ╱                  │     │      ╱             │
+  └────────────────────┘     └────────────────────┘
+
+CÁCH LÀM:
+  1. Chạy predict trên val set → lấy all predictions
+  2. Tính ECE (Expected Calibration Error)
+  3. Tìm temperature T tối ưu: softmax(logits / T)
+  4. Apply T khi inference → confidence chính xác hơn
+```
+
+**Độ khó:** ⭐⭐ (< 1 ngày) — Thêm 1 bước post-processing
+
+---
+
+## 🔴 NHÓM C: TẦM NHÌN XA (Nghiên cứu level)
+
+---
+
+### 9. 🌡️ Multi-Modal Sensor Fusion
+
+```
+Ý tưởng: Kết hợp NHIỀU loại sensor, không chỉ camera RGB
+
+  Camera RGB ──────┐
+  Camera thermal ──┤
+  Sensor khí gas ──┼──► Fusion Model ──► "CHÁY chắc chắn 99%"
+  Sensor nhiệt ────┤
+  Microphone ──────┘ (tiếng nổ, tiếng cháy)
+
+Tại sao? 
+  - Camera RGB: bị ảnh hưởng bởi ánh sáng, ban đêm
+  - Thermal: "thấy" nhiệt dù tối
+  - Gas sensor: phát hiện CO, CO2 trước khi thấy lửa
+  
+  → Kết hợp = CHÍNH XÁC + ÍT FALSE POSITIVE hơn nhiều!
+```
+
+**Độ khó:** ⭐⭐⭐⭐ — Cần phần cứng, nhưng có thể simulate
+
+---
+
+### 10. 🔮 Dự đoán Lan tỏa Lửa (Fire Spread Prediction)
+
+```
+Ý tưởng: Không chỉ PHÁT HIỆN mà còn DỰ ĐOÁN lửa sẽ lan đi đâu
+
+  Hiện tại: "Đây có lửa" (reactive)
+  Cải tiến: "Lửa sẽ lan sang nhà bên trái trong 5 phút" (predictive)
+
+  Yếu tố dự đoán:
+  - Hướng gió
+  - Vật liệu xung quanh
+  - Mật độ nhà cửa
+  - Kích thước lửa hiện tại
+  
+  → Đây là bài toán PHD level, nhưng ĐỀ CẬP trong report 
+    sẽ ghi NHIỀU điểm (cho thấy tầm nhìn xa)
+```
+
+**Độ khó:** ⭐⭐⭐⭐⭐ — Research level, nhưng đề cập trong report tốt
+
+---
+
+## ✅ Lộ trình gợi ý — Nên làm theo thứ tự nào?
+
+```mermaid
+graph TD
+    A["Tuần 1"] --> B["1. RT-DETR v2 upgrade ⭐"]
+    A --> C["2. Risk Scoring ⭐⭐"]
+    A --> D["3. Grad-CAM ⭐⭐"]
+    
+    E["Tuần 2"] --> F["4. GAN Augmentation ⭐⭐"]
+    E --> G["5. Confidence Calibration ⭐⭐"]
+    
+    H["Tuần 3-4"] --> I["6. Temporal LSTM ⭐⭐⭐"]
+    H --> J["7. On-Device CoreML ⭐⭐⭐"]
+    
+    K["Tuần 5+"] --> L["8. Knowledge Distillation ⭐⭐⭐"]
+    
+    B --> E
+    C --> E
+    D --> E
+    F --> H
+    G --> H
+    I --> K
+    J --> K
+```
+
+> [!TIP]
+> **Mẹo ghi điểm cao:** Chỉ cần implement **#1 Grad-CAM + #2 Risk Scoring + #3 RT-DETR v2** là đã nổi bật hơn 90% đồ án khác rồi. Phần còn lại ĐỀ CẬP trong report như "hướng phát triển tương lai".
+
+---
+
+## 📚 Tài liệu tham khảo cho Report
+
+```
+[1] Lyu et al., "RT-DETRv2: Improved Baseline with Bag-of-Freebies," arXiv 2024
+[2] Selvaraju et al., "Grad-CAM: Visual Explanations from Deep Networks," ICCV 2017
+[3] Hinton et al., "Distilling Knowledge in a Neural Network," arXiv 2015
+[4] SAHI: Akyon et al., "Slicing Aided Hyper Inference," ICIP 2022
+[5] "Deep Learning for Fire Detection: A Comprehensive Review," MDPI Sensors 2025
+[6] Apple CoreML Documentation, developer.apple.com, 2025
+[7] Guo et al., "On Calibration of Modern Neural Networks," ICML 2017
+```

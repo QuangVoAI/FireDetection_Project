@@ -20,8 +20,13 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="FireDetect">
     <meta name="theme-color" content="#0a0a1a">
+    <meta name="msapplication-TileColor" content="#0a0a1a">
+    <meta name="msapplication-TileImage" content="/static/icon-144.png">
 
-    <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="/static/icon-152.png">
+    <link rel="apple-touch-icon" sizes="144x144" href="/static/icon-144.png">
     <link rel="manifest" href="/static/manifest.json">
 
     <title>🔥 Phát hiện Cháy Sớm</title>
@@ -852,16 +857,32 @@
      ═══════════════════════════════════════════════════════ -->
     <main class="main">
 
-        <!-- Install Banner (chỉ hiện trên iOS Safari) -->
+        <!-- Install Banner (iOS Safari + Android Chrome) -->
         <div class="install-banner" id="install-banner">
-            <h3>📲 Cài app lên iPhone</h3>
-            <p>App hoàn toàn miễn phí, không cần App Store!</p>
-            <ol class="steps">
-                <li>Nhấn nút <strong>Chia sẻ</strong> (⬆️) ở thanh dưới Safari</li>
-                <li>Chọn <strong>"Thêm vào Màn hình chính"</strong></li>
-                <li>Nhấn <strong>"Thêm"</strong> → App xuất hiện trên Home Screen!</li>
-            </ol>
+            <h3>📲 Cài app lên điện thoại</h3>
+            <p>App hoàn toàn miễn phí, không cần App Store / Play Store!</p>
+
+            <!-- iOS Instructions -->
+            <div id="ios-install-steps" style="display:none">
+                <ol class="steps">
+                    <li>Nhấn nút <strong>Chia sẻ</strong> (⬆️) ở thanh dưới Safari</li>
+                    <li>Chọn <strong>"Thêm vào Màn hình chính"</strong></li>
+                    <li>Nhấn <strong>"Thêm"</strong> → App xuất hiện trên Home Screen!</li>
+                </ol>
+            </div>
+
+            <!-- Android Install Button -->
+            <button class="camera-btn" id="android-install-btn" style="display:none; margin-top:12px"
+                onclick="installPWA()">
+                ⬇️ Cài đặt App
+            </button>
+
             <button class="install-dismiss" onclick="dismissInstall()">Đã hiểu</button>
+        </div>
+
+        <!-- Offline Banner -->
+        <div class="alert-banner" id="offline-banner" style="display:none">
+            📡 Không có kết nối mạng — Một số chức năng sẽ không hoạt động
         </div>
 
         <!-- Tab Navigation -->
@@ -1023,26 +1044,98 @@
         // ============================================================
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js')
-                .then(() => console.log('✅ Service Worker registered'))
+                .then((registration) => {
+                    console.log('✅ Service Worker registered');
+
+                    // Kiểm tra update SW mới
+                    registration.addEventListener('updatefound', () => {
+                        const newWorker = registration.installing;
+                        newWorker.addEventListener('statechange', () => {
+                            if (newWorker.state === 'activated') {
+                                // SW mới đã active → hỏi user refresh
+                                if (confirm('🔄 Có bản cập nhật mới! Tải lại trang?')) {
+                                    window.location.reload();
+                                }
+                            }
+                        });
+                    });
+                })
                 .catch(err => console.log('SW error:', err));
         }
 
         // ============================================================
-        // Install Banner — hiện hướng dẫn cài PWA trên iOS
+        // PWA Install — Hỗ trợ cả iOS và Android
         // ============================================================
-        // Kiểm tra: đang chạy trên iOS Safari VÀ chưa cài PWA
+
+        // Android Chrome: bắt event beforeinstallprompt
+        let deferredPrompt = null;
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+
+            // Hiện install banner cho Android
+            const dismissed = localStorage.getItem('install-dismissed');
+            if (!dismissed) {
+                document.getElementById('install-banner').style.display = 'block';
+                document.getElementById('android-install-btn').style.display = 'block';
+            }
+        });
+
+        async function installPWA() {
+            if (!deferredPrompt) return;
+
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            console.log('Install outcome:', outcome);
+
+            if (outcome === 'accepted') {
+                document.getElementById('install-banner').style.display = 'none';
+            }
+            deferredPrompt = null;
+        }
+
+        // iOS Safari: hướng dẫn cài thủ công
         const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
-        const isStandalone = window.navigator.standalone === true;
+        const isStandalone = window.navigator.standalone === true
+            || window.matchMedia('(display-mode: standalone)').matches;
         const dismissed = localStorage.getItem('install-dismissed');
 
         if (isIOS && !isStandalone && !dismissed) {
             document.getElementById('install-banner').style.display = 'block';
+            document.getElementById('ios-install-steps').style.display = 'block';
         }
+
+        // Khi đã cài xong (từ standalone mode)
+        window.addEventListener('appinstalled', () => {
+            console.log('✅ PWA installed!');
+            document.getElementById('install-banner').style.display = 'none';
+            deferredPrompt = null;
+        });
 
         function dismissInstall() {
             document.getElementById('install-banner').style.display = 'none';
             localStorage.setItem('install-dismissed', 'true');
         }
+
+        // ============================================================
+        // Online/Offline Detection
+        // ============================================================
+        const offlineBanner = document.getElementById('offline-banner');
+
+        function updateOnlineStatus() {
+            if (navigator.onLine) {
+                offlineBanner.style.display = 'none';
+                offlineBanner.className = 'alert-banner';
+            } else {
+                offlineBanner.style.display = 'block';
+                offlineBanner.className = 'alert-banner fire';
+            }
+        }
+
+        window.addEventListener('online', updateOnlineStatus);
+        window.addEventListener('offline', updateOnlineStatus);
+        updateOnlineStatus(); // Check on load
 
         // ============================================================
         // Tab Navigation
