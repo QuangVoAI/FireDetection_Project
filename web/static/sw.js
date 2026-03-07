@@ -18,18 +18,20 @@
 //   4. Offline fallback → Hiển thị trang "Không có mạng"
 // ============================================================
 
-const CACHE_VERSION = 'v2';
+const CACHE_VERSION = 'v3';
 const CACHE_STATIC = `fire-detect-static-${CACHE_VERSION}`;
 const CACHE_DYNAMIC = `fire-detect-dynamic-${CACHE_VERSION}`;
 
 // Danh sách assets cần pre-cache khi install
 const PRECACHE_ASSETS = [
     '/',
+    '/static/css/app.css',
+    '/static/js/app.js',
     '/static/manifest.json',
-    '/static/favicon.png',
-    '/static/icon-192.png',
-    '/static/icon-512.png',
-    '/static/apple-touch-icon.png',
+    '/static/icons/favicon.png',
+    '/static/icons/icon-192.png',
+    '/static/icons/icon-512.png',
+    '/static/icons/apple-touch-icon.png',
 ];
 
 // ============================================================

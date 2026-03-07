@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#ec5b13", // Theme requirement
+                        "ios-green": "#34C759",
+                        "ios-red": "#FF3B30",
+                        "ios-blue": "#007AFF",
+                        "background-light": "#f8f6f6",
+                        "background-dark": "#221610",
+                    },
+                    fontFamily: {
+                        "display": ["Public Sans", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "1.25rem",
+                        "2xl": "1.5rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        .liquid-glass {
+            background: rgba(255, 255, 255, 0.45);
+            backdrop-filter: blur(30px) saturate(180%);
+            -webkit-backdrop-filter: blur(30px) saturate(180%);
+            border: 0.5px solid rgba(255, 255, 255, 0.4);
+        }
+        .organic-blob {
+            filter: blur(80px);
+            opacity: 0.4;
+            z-index: -1;
+            transition: all 2s ease-in-out;
+        }
+        @keyframes pulse-glow {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 122, 255, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(0, 122, 255, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 122, 255, 0); }
+        }
+        .animate-pulse-glow {
+            animation: pulse-glow 2s infinite;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+
+    <!-- PWA Config -->
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/icons/favicon.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/icons/apple-touch-icon.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="/static/icons/icon-152.png">
+    <link rel="apple-touch-icon" sizes="144x144" href="/static/icons/icon-144.png">
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display antialiased overflow-hidden">
+<div class="relative h-screen w-full flex flex-col">
+<!-- Full Screen Map Background -->
+<div class="absolute inset-0 z-0 bg-slate-200">
+<div class="w-full h-full bg-cover bg-center" data-alt="Minimalist top down city map with light colors" data-location="San Francisco, USA" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCu8p_JY2pcIdtEUYsiJP3NmJuhnZQi1dP2ECs0d5_DxqmwYBgqLo6wTM4rjgUrRBjTRIIpvnW6gEIAgUzckwQIPz2vDxif5IANVavfIBOUDwGkMt47csOanrE1ev3hELYwtimQa1iwraSnICeThgVLKt9_fcLAU5aCszMA5KUo1HSspVoBPj_C4dpIuesUJNmvcT1JjrZT6W4kursqJTxucJLNn5T_qSuiHTmTL-YjNIGwPR7WI0cUdB6ximkM1CuFCBpLVPbkcmk')">
+</div>
+<!-- Minimal Map Labels / Markers -->
+<div class="absolute top-1/3 left-1/4">
+<div class="relative flex flex-col items-center">
+<div class="w-12 h-12 rounded-full border-2 border-white overflow-hidden shadow-[0_0_15px_rgba(0,122,255,0.5)] animate-pulse-glow">
+<img alt="Sarah" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAT1CiklSBHICesWj9KAe_3DiaRTGziHYcIo0hlY8lSA9kTgGGiQCpNx6fSCScwc6oEqT-Kng1EO826zFvbXXnv7XHdITA4JMJjAIT-H9Z2rEnqkUBGHQ6Hr_Gicacry3Kc53sXaEsYe-Rnr8DnEFc3WP8h_HNSYLZxhT9w4vNwu3nxJT5Qhk63D-z4vZeMKCpEdvUW2Fm9qeEyr-Hqm9pouvQgAdHh-VNrNSZNkGFOVAkcSGxhTF3HQGX9KZNFQ4rmQbJBxw0bE4Q"/>
+</div>
+</div>
+</div>
+<div class="absolute top-1/2 right-1/3">
+<div class="relative flex flex-col items-center">
+<div class="w-12 h-12 rounded-full border-2 border-white overflow-hidden shadow-[0_0_15px_rgba(0,0,0,0.2)]">
+<img alt="Marcus" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBiIQt7PCwtxQq0pCxyDFgrC1t0GbBO_aYwP7w5osoc9OjNa4TbGqxVxnzB0WG9i5EcdbLfL3UN3lMTAntLBqfnGIYaAukGT2mNfjRPxu2SgjO5zNqHhhxPKp68UXao8zv8WyAqSuwOqCW9uCzczKpRN6gg80UA4dhcfNFsnxBBjxZ0BCloC2MW4Mg-zPMLA3DikIN1SyXSne1ydVmCJFlcYPkNX3J0w_pb9pAXNsJrrHpmzEURH1lq3NgPBPQNtSm_JaCyDEUaV4c"/>
+</div>
+</div>
+</div>
+</div>
+<!-- Floating UI Top Right -->
+<div class="absolute top-12 right-4 flex flex-col gap-3 z-10">
+<button class="w-12 h-12 rounded-full liquid-glass flex items-center justify-center shadow-lg text-slate-800">
+<span class="material-symbols-outlined">layers</span>
+</button>
+<button class="w-12 h-12 rounded-full liquid-glass flex items-center justify-center shadow-lg text-slate-800">
+<span class="material-symbols-outlined">near_me</span>
+</button>
+</div>
+<!-- Floating Search Bar -->
+<!-- Bottom Sheet Wrapper -->
+<div class="mt-auto relative z-20 flex flex-col">
+<!-- Liquid Glass Organic Shapes (Layered behind sheet) -->
+<div class="absolute -top-24 left-0 right-0 h-64 overflow-hidden pointer-events-none -z-10">
+<div class="organic-blob absolute -left-20 top-0 w-64 h-64 bg-primary/30 rounded-full"></div>
+<div class="organic-blob absolute -right-20 top-20 w-72 h-72 bg-ios-blue/30 rounded-full"></div>
+<div class="organic-blob absolute left-1/3 bottom-0 w-56 h-56 bg-ios-green/30 rounded-full"></div>
+</div>
+<!-- The Bottom Sheet -->
+<div class="liquid-glass rounded-t-[2.5rem] shadow-2xl flex flex-col max-h-[70vh]">
+<!-- Pull Bar -->
+<div class="w-full flex justify-center py-3">
+<div class="w-10 h-1.5 bg-slate-400/30 rounded-full"></div>
+</div>
+<!-- Sheet Content -->
+<div class="px-6 pb-2">
+<div class="flex justify-between items-center mb-4">
+<h2 class="text-3xl font-bold tracking-tight text-slate-900">People</h2>
+<button class="w-8 h-8 rounded-full bg-slate-200/50 flex items-center justify-center">
+<span class="material-symbols-outlined text-ios-blue font-bold text-lg">add</span>
+</button>
+</div>
+<!-- List -->
+<div class="space-y-1 overflow-y-auto pb-6">
+<!-- User 1 -->
+<div class="flex items-center gap-4 py-3 border-b border-slate-200/20 active:bg-white/20 transition-colors rounded-xl px-2 -mx-2">
+<div class="relative">
+<img alt="" class="w-14 h-14 rounded-full object-cover border-2 border-white/50" data-alt="Portrait profile picture of Sarah Jenkins" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAT1CiklSBHICesWj9KAe_3DiaRTGziHYcIo0hlY8lSA9kTgGGiQCpNx6fSCScwc6oEqT-Kng1EO826zFvbXXnv7XHdITA4JMJjAIT-H9Z2rEnqkUBGHQ6Hr_Gicacry3Kc53sXaEsYe-Rnr8DnEFc3WP8h_HNSYLZxhT9w4vNwu3nxJT5Qhk63D-z4vZeMKCpEdvUW2Fm9qeEyr-Hqm9pouvQgAdHh-VNrNSZNkGFOVAkcSGxhTF3HQGX9KZNFQ4rmQbJBxw0bE4Q"/>
+<div class="absolute bottom-0 right-0 w-4 h-4 bg-ios-green border-2 border-white rounded-full" style="background-color: #34C759;"></div>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-start">
+<p class="text-lg font-semibold text-slate-900 leading-tight">Sarah Jenkins</p>
+<p class="text-xs font-medium text-slate-500">Just now</p>
+</div>
+<div class="flex items-center gap-1.5">
+<span class="text-ios-green material-symbols-outlined text-sm font-bold" style="color: #34C759;">verified_user</span>
+<p class="text-sm font-medium text-ios-green" style="color: #34C759;">Verified Safe · NoMad</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-slate-400">chevron_right</span>
+</div>
+<!-- User 2 -->
+<div class="flex items-center gap-4 py-3 border-b border-slate-200/20 active:bg-white/20 transition-colors rounded-xl px-2 -mx-2">
+<div class="relative">
+<img alt="" class="w-14 h-14 rounded-full object-cover border-2 border-white/50" data-alt="Portrait profile picture of Marcus Thorne" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBiIQt7PCwtxQq0pCxyDFgrC1t0GbBO_aYwP7w5osoc9OjNa4TbGqxVxnzB0WG9i5EcdbLfL3UN3lMTAntLBqfnGIYaAukGT2mNfjRPxu2SgjO5zNqHhhxPKp68UXao8zv8WyAqSuwOqCW9uCzczKpRN6gg80UA4dhcfNFsnxBBjxZ0BCloC2MW4Mg-zPMLA3DikIN1SyXSne1ydVmCJFlcYPkNX3J0w_pb9pAXNsJrrHpmzEURH1lq3NgPBPQNtSm_JaCyDEUaV4c"/>
+<div class="absolute bottom-0 right-0 w-4 h-4 bg-ios-green border-2 border-white rounded-full" style="background-color: #34C759;"></div>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-start">
+<p class="text-lg font-semibold text-slate-900 leading-tight">Marcus Thorne</p>
+<p class="text-xs font-medium text-slate-500">2m ago</p>
+</div>
+<div class="flex items-center gap-1.5">
+<span class="text-ios-green material-symbols-outlined text-sm font-bold" style="color: #34C759;">verified_user</span>
+<p class="text-sm font-medium text-ios-green" style="color: #34C759;">Verified Safe · SoHo</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-slate-400">chevron_right</span>
+</div>
+<!-- User 3 -->
+<div class="flex items-center gap-4 py-3 border-b border-slate-200/20 active:bg-white/20 transition-colors rounded-xl px-2 -mx-2">
+<div class="relative">
+<img alt="" class="w-14 h-14 rounded-full object-cover border-2 border-white/50" data-alt="Portrait profile picture of David Kim" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAsU5pJPOzCa0LJ5oAIJ3-4WMP015my34XE_ukn2IFmUVGz_rhH4zIk0gXTjK662zw8PMa2RJkF0CtpoMuQSlHjqxtf56CVzs2aU4whxc3Xq4shDjQgTlDrl36j77e7TzaRiliNJcLSXXQskCMAo2jxVivSvbPFqJ6OufCcHPcYRjsyAN3fJ3GApdGsPPdLKFR_dyPkHR9FBNUfLskYhGZuUfOQBNLnGdu4JLrSGqcrJ2zVQaVeKz-hlw1SlrHOyF-6wSBz3EiT3w4"/>
+<div class="absolute bottom-0 right-0 w-4 h-4 bg-slate-300 border-2 border-white rounded-full"></div>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-start">
+<p class="text-lg font-semibold text-slate-900 leading-tight">David Kim</p>
+<p class="text-xs font-medium text-slate-500">12m ago</p>
+</div>
+<p class="text-sm font-medium text-slate-500">Battery Low · Financial District</p>
+</div>
+<span class="material-symbols-outlined text-slate-400">chevron_right</span>
+</div>
+</div>
+</div>
+<!-- Bottom Tab Bar Container -->
+<div class="border-t border-slate-200/30 px-6 pt-3 pb-8 flex justify-between items-center liquid-glass">
+<a class="flex flex-col items-center gap-1 text-ios-blue" href="#" style="color: #007AFF;">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">people</span>
+<span class="text-[10px] font-bold uppercase tracking-wider">PEOPLE</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-500" href="#">
+<span class="material-symbols-outlined">devices_other</span>
+<span class="text-[10px] font-bold uppercase tracking-wider">DEVICES</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-500" href="#">
+<span class="material-symbols-outlined">visibility</span>
+<span class="text-[10px] font-bold uppercase tracking-wider">SENTINEL</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-500" href="#">
+<span class="material-symbols-outlined">map</span>
+<span class="text-[10px] font-bold uppercase tracking-wider">ALLEYWAYS</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-500" href="#">
+<span class="material-symbols-outlined">account_circle</span>
+<span class="text-[10px] font-bold uppercase tracking-wider">ME</span>
+</a>
+</div>
+</div>
+</div>
+</div>
+
+<script src="/static/js/app.js"></script>
+</body></html>

@@ -1,0 +1,167 @@
+# ☁️ Deploy Fire Detection App — AWS vs Azure
+
+## 📊 So sánh nhanh
+
+| | AWS | Azure |
+|---|---|---|
+| **Free tier** | 12 tháng (hạn chế) | **$100 credit miễn phí** (Azure for Students) |
+| **Cần thẻ tín dụng?** | ✅ Có (ngay cả free tier) | ❌ **Không cần** (dùng email .edu) |
+| **VM free** | t2.micro (1 vCPU, 1GB RAM) | B1s (1 vCPU, 1GB RAM) |
+| **GPU free** | ❌ Không | ❌ Không |
+| **Dễ dùng** | ⭐⭐⭐ | ⭐⭐⭐⭐ (portal trực quan hơn) |
+| **Phù hợp** | Người có kinh nghiệm cloud | **Sinh viên** (credit miễn phí) |
+
+> [!TIP]
+> **Khuyến nghị:** Dùng **Azure for Students** — được **$100 credit miễn phí**, **không cần thẻ tín dụng**, chỉ cần email trường (.edu.vn).
+
+---
+
+## 🔵 Phương án 1: Azure for Students (Khuyên dùng)
+
+### Bước 1: Đăng ký Azure for Students
+1. Vào [azure.microsoft.com/free/students](https://azure.microsoft.com/free/students)
+2. Đăng nhập bằng **email trường** (đuôi `.edu.vn`)
+3. Nhận **$100 credit** miễn phí — không cần thẻ tín dụng!
+
+### Bước 2: Tạo Virtual Machine (VM)
+1. Vào **Azure Portal** → Create a resource → **Virtual Machine**
+2. Cấu hình:
+
+| Mục | Giá trị khuyến nghị |
+|---|---|
+| **Image** | Ubuntu 22.04 LTS |
+| **Size** | Standard_B2s (2 vCPU, 4GB RAM) ~$30/tháng |
+| **Authentication** | SSH public key |
+| **Inbound ports** | Mở port **22** (SSH) + **8000** (app) + **443** (HTTPS) |
+
+> [!IMPORTANT]
+> B1s (1GB RAM) **quá nhỏ** cho PyTorch + RT-DETR model. Tối thiểu nên dùng **B2s (4GB RAM)**.
+> Với $100 credit, bạn có thể chạy B2s khoảng **3 tháng**.
+
+### Bước 3: SSH vào VM & cài đặt
+```bash
+# SSH vào VM
+ssh -i ~/.ssh/azure_key azureuser@<VM_PUBLIC_IP>
+
+# Cài Python & dependencies
+sudo apt update && sudo apt install -y python3-pip python3-venv git
+
+# Clone project
+git clone <your-repo-url> fire-detection
+cd fire-detection
+
+# Tạo virtual env
+python3 -m venv venv
+source venv/bin/activate
+
+# Cài dependencies
+pip install -r requirements.txt
+
+# Chạy server
+python -m uvicorn web.main:app --host 0.0.0.0 --port 8000
+```
+
+### Bước 4: Mở port trên Azure
+1. VM → **Networking** → **Add inbound port rule**
+2. Port: **8000**, Protocol: TCP, Action: Allow
+
+### Bước 5: Truy cập
+→ Mở browser: `http://<VM_PUBLIC_IP>:8000`
+
+### (Tùy chọn) Thêm domain + HTTPS với Nginx
+```bash
+sudo apt install -y nginx certbot python3-certbot-nginx
+
+# Config Nginx reverse proxy
+sudo tee /etc/nginx/sites-available/firedetect << 'EOF'
+server {
+    listen 80;
+    server_name your-domain.com;
+    
+    location / {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        client_max_body_size 20M;
+    }
+}
+EOF
+
+sudo ln -s /etc/nginx/sites-available/firedetect /etc/nginx/sites-enabled/
+sudo nginx -t && sudo systemctl restart nginx
+
+# HTTPS miễn phí với Let's Encrypt
+sudo certbot --nginx -d your-domain.com
+```
+
+---
+
+## 🟠 Phương án 2: AWS (EC2)
+
+### Bước 1: Đăng ký
+1. Vào [aws.amazon.com/free](https://aws.amazon.com/free)
+2. **Cần thẻ tín dụng** (sẽ charge $1 để verify, sau đó hoàn lại)
+3. Free tier 12 tháng: t2.micro (1 vCPU, 1GB RAM)
+
+> [!WARNING]
+> t2.micro (1GB RAM) **không đủ** cho PyTorch model. Bạn sẽ cần t3.small hoặc lớn hơn → **tốn tiền** (~$15-30/tháng).
+
+### Bước 2: Launch EC2 Instance
+1. AWS Console → EC2 → **Launch Instance**
+2. Cấu hình:
+
+| Mục | Giá trị |
+|---|---|
+| **AMI** | Ubuntu 22.04 |
+| **Instance type** | t3.medium (2 vCPU, 4GB RAM) ~$30/tháng |
+| **Key pair** | Tạo mới + download .pem |
+| **Security Group** | Mở port 22, 80, 443, 8000 |
+
+### Bước 3: SSH & Deploy
+```bash
+# SSH
+ssh -i "key.pem" ubuntu@<EC2_PUBLIC_IP>
+
+# Giống Azure: cài Python, clone repo, pip install, chạy uvicorn
+```
+
+---
+
+## ⚡ Phương án 3: Azure Container App (Nâng cao — dùng Docker)
+
+Nếu bạn muốn **deploy chuyên nghiệp hơn**, có thể đóng gói app thành Docker container:
+
+```dockerfile
+# Dockerfile
+FROM python:3.10-slim
+
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
+EXPOSE 8000
+CMD ["uvicorn", "web.main:app", "--host", "0.0.0.0", "--port", "8000"]
+```
+
+Sau đó deploy lên **Azure Container Apps** — auto scale, không cần quản lý VM.
+
+---
+
+## 🎯 Tóm lại — Nên chọn gì?
+
+```mermaid
+graph TD
+    A[Bạn là sinh viên?] -->|Có| B[Có email .edu.vn?]
+    A -->|Không| C[AWS EC2]
+    B -->|Có| D["✅ Azure for Students<br/>$100 free, không cần thẻ"]
+    B -->|Không| E[Có thẻ tín dụng?]
+    E -->|Có| C
+    E -->|Không| F["Dùng Ngrok/Cloudflare<br/>(chạy từ máy cá nhân)"]
+```
+
+> [!IMPORTANT]
+> **Lưu ý quan trọng:** Model RT-DETR cần ít nhất **4GB RAM** để chạy. Free tier VM (1GB) sẽ **không đủ**. 
+> Với Azure for Students ($100 credit), bạn dùng máy B2s (4GB) chạy được khoảng 3 tháng — đủ để demo đồ án.

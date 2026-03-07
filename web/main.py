@@ -8,20 +8,20 @@ MỤC ĐÍCH:
     1. Upload ảnh → detect lửa/khói → trả về kết quả
     2. Upload video → detect realtime → stream kết quả
     3. Webcam live detection (qua browser)
-    4. API endpoint cho integration
-
-GIẢI THÍCH FASTAPI CHO BẠN:
-    FastAPI là web framework Python hiện đại:
-    - Nhanh (async support)
-    - Tự tạo API docs tại /docs
-    - Type hints → auto validation
-    - Dễ deploy (Docker, cloud)
+    4. Camera IP stream → detect + tự động ghi video
+    5. API endpoint cho integration
 
 ENDPOINT:
     GET  /              → Trang web chính (UI)
     POST /api/detect    → Upload ảnh → trả về detections (JSON)
     POST /api/detect-image → Upload ảnh → trả về ảnh có bbox (image)
     GET  /api/health    → Kiểm tra server status
+    POST /api/camera-stream/start  → Bắt đầu stream từ Camera IP
+    POST /api/camera-stream/stop   → Dừng stream Camera IP
+    GET  /api/camera-stream/frame  → Lấy frame mới nhất (MJPEG)
+    GET  /api/camera-stream/status → Trạng thái camera stream
+    GET  /api/recordings           → Danh sách video đã ghi
+    GET  /api/recordings/{name}    → Tải video đã ghi
 
 CÁCH CHẠY:
     uvicorn web.main:app --host 0.0.0.0 --port 8000
@@ -34,7 +34,11 @@ import sys
 import base64
 import logging
 import tempfile
+import threading
+import time as time_module
 from pathlib import Path
+from datetime import datetime
+from collections import deque
 from typing import Optional
 
 import cv2
@@ -83,6 +87,26 @@ model: Optional[FireDetectionModel] = None
 config: Optional[Config] = None
 
 logger = logging.getLogger(__name__)
+
+# ============================================================
+# Camera IP Stream + Video Recording — State
+# ============================================================
+# Camera stream state
+camera_thread: Optional[threading.Thread] = None
+camera_running = False
+camera_url = ""
+latest_frame: Optional[np.ndarray] = None
+latest_detections: list = []
+frame_lock = threading.Lock()
+
+# Video recording state
+is_recording = False
+video_writer: Optional[cv2.VideoWriter] = None
+recording_filename = ""
+no_detection_counter = 0
+NO_DETECTION_STOP_THRESHOLD = 15  # Dừng ghi sau 15 frame không detect (~30s)
+RECORDINGS_DIR = Path(__file__).resolve().parent.parent / "recordings"
+RECORDINGS_DIR.mkdir(exist_ok=True)
 
 
 @app.on_event("startup")
@@ -135,6 +159,17 @@ async def root():
         </body>
         </html>
         """)
+
+
+@app.get("/{page}.html", response_class=HTMLResponse)
+async def serve_html_pages(page: str):
+    """
+    Serve các trang HTML phụ trợ (people.html, devices.html, v.v) trực tiếp từ URL root.
+    """
+    html_path = static_dir / f"{page}.html"
+    if html_path.exists():
+        return HTMLResponse(content=html_path.read_text(encoding='utf-8'))
+    raise HTTPException(status_code=404, detail="Page not found")
 
 
 @app.get("/sw.js")
@@ -288,6 +323,233 @@ async def detect_image(
     io_buf = io.BytesIO(buffer.tobytes())
 
     return StreamingResponse(io_buf, media_type="image/jpeg")
+
+
+# ============================================================
+# CAMERA IP STREAM — Đọc stream từ camera IP (RTSP/HTTP)
+# ============================================================
+
+def camera_stream_worker(url: str):
+    """
+    Worker thread: đọc frame từ Camera IP → detect → ghi video nếu có lửa.
+
+    FLOW:
+        1. Mở stream (RTSP hoặc HTTP MJPEG)
+        2. Đọc frame liên tục
+        3. Mỗi 2 giây: chạy model detect
+        4. Nếu có lửa/khói → bắt đầu ghi video
+        5. Nếu hết lửa/khói (30s) → dừng ghi
+    """
+    global camera_running, latest_frame, latest_detections
+    global is_recording, video_writer, recording_filename, no_detection_counter
+
+    cap = cv2.VideoCapture(url)
+    if not cap.isOpened():
+        logger.error(f"❌ Không thể kết nối camera: {url}")
+        camera_running = False
+        return
+
+    logger.info(f"✅ Đã kết nối camera: {url}")
+    frame_count = 0
+    detect_interval = 4  # Detect mỗi 4 frame (~2 giây với 2 FPS)
+
+    while camera_running:
+        ret, frame = cap.read()
+        if not ret:
+            logger.warning("⚠️ Mất kết nối camera, thử lại...")
+            time_module.sleep(2)
+            cap.release()
+            cap = cv2.VideoCapture(url)
+            continue
+
+        with frame_lock:
+            latest_frame = frame.copy()
+
+        frame_count += 1
+
+        # Detect mỗi N frame
+        if model is not None and frame_count % detect_interval == 0:
+            try:
+                detections = model.predict(
+                    frame,
+                    conf_threshold=0.35
+                )
+                with frame_lock:
+                    latest_detections = detections
+
+                # === Logic ghi video ===
+                has_fire_or_smoke = len(detections) > 0
+
+                if has_fire_or_smoke:
+                    no_detection_counter = 0
+
+                    if not is_recording:
+                        # Bắt đầu ghi video mới
+                        start_recording(frame)
+
+                    # Ghi frame có detection
+                    if is_recording and video_writer is not None:
+                        # Vẽ bbox lên frame trước khi ghi
+                        from src.utils.visualization import draw_detections
+                        annotated = draw_detections(frame, detections)
+                        video_writer.write(annotated)
+                else:
+                    if is_recording:
+                        no_detection_counter += 1
+                        # Vẫn ghi thêm vài frame sau khi hết detect
+                        if video_writer is not None:
+                            video_writer.write(frame)
+
+                        if no_detection_counter >= NO_DETECTION_STOP_THRESHOLD:
+                            stop_recording()
+
+            except Exception as e:
+                logger.error(f"Detect error: {e}")
+
+        # Nếu đang ghi mà frame không phải frame detect → vẫn ghi
+        elif is_recording and video_writer is not None:
+            video_writer.write(frame)
+
+        # Giới hạn FPS (~2 FPS để không quá tải)
+        time_module.sleep(0.5)
+
+    # Cleanup
+    cap.release()
+    if is_recording:
+        stop_recording()
+    logger.info("📷 Camera stream stopped")
+
+
+def start_recording(frame: np.ndarray):
+    """Bắt đầu ghi video khi phát hiện lửa/khói."""
+    global is_recording, video_writer, recording_filename, no_detection_counter
+
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    recording_filename = f"fire_detected_{timestamp}.mp4"
+    filepath = RECORDINGS_DIR / recording_filename
+
+    h, w = frame.shape[:2]
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    video_writer = cv2.VideoWriter(str(filepath), fourcc, 2.0, (w, h))
+    is_recording = True
+    no_detection_counter = 0
+
+    logger.info(f"🔴 BẮT ĐẦU GHI VIDEO: {recording_filename}")
+
+
+def stop_recording():
+    """Dừng ghi video."""
+    global is_recording, video_writer, recording_filename, no_detection_counter
+
+    if video_writer is not None:
+        video_writer.release()
+        video_writer = None
+
+    logger.info(f"⏹️ DỪNG GHI VIDEO: {recording_filename}")
+    is_recording = False
+    recording_filename = ""
+    no_detection_counter = 0
+
+
+@app.post("/api/camera-stream/start")
+async def start_camera_stream(url: str = Query(..., description="Camera IP URL (RTSP hoặc HTTP)")):
+    """
+    Bắt đầu đọc stream từ Camera IP.
+
+    Args:
+        url: URL camera, ví dụ:
+            - rtsp://admin:pass@192.168.1.64:554/Streaming/channels/101
+            - http://192.168.1.100:8080/video
+    """
+    global camera_thread, camera_running, camera_url
+
+    if camera_running:
+        return {"status": "already_running", "url": camera_url}
+
+    camera_url = url
+    camera_running = True
+    camera_thread = threading.Thread(target=camera_stream_worker, args=(url,), daemon=True)
+    camera_thread.start()
+
+    return {"status": "started", "url": url}
+
+
+@app.post("/api/camera-stream/stop")
+async def stop_camera_stream():
+    """Dừng stream Camera IP."""
+    global camera_running
+    camera_running = False
+    return {"status": "stopped"}
+
+
+@app.get("/api/camera-stream/status")
+async def camera_stream_status():
+    """Trạng thái camera stream + recording."""
+    with frame_lock:
+        det_count = len(latest_detections)
+        det_list = latest_detections.copy()
+
+    return {
+        "streaming": camera_running,
+        "url": camera_url if camera_running else "",
+        "recording": is_recording,
+        "recording_file": recording_filename if is_recording else "",
+        "detections": det_list,
+        "detection_count": det_count,
+    }
+
+
+@app.get("/api/camera-stream/frame")
+async def get_camera_frame():
+    """Lấy frame mới nhất từ camera stream (JPEG)."""
+    with frame_lock:
+        frame = latest_frame
+
+    if frame is None:
+        raise HTTPException(status_code=404, detail="Chưa có frame. Camera chưa kết nối.")
+
+    # Vẽ detections lên frame
+    if latest_detections:
+        from src.utils.visualization import draw_detections_fancy
+        frame = draw_detections_fancy(frame, latest_detections)
+
+    _, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
+    io_buf = io.BytesIO(buffer.tobytes())
+    return StreamingResponse(io_buf, media_type="image/jpeg")
+
+
+# ============================================================
+# RECORDINGS — Quản lý video đã ghi
+# ============================================================
+
+@app.get("/api/recordings")
+async def list_recordings():
+    """Danh sách video đã ghi khi phát hiện lửa."""
+    recordings = []
+    for f in sorted(RECORDINGS_DIR.glob("*.mp4"), reverse=True):
+        stat = f.stat()
+        recordings.append({
+            "filename": f.name,
+            "size_mb": round(stat.st_size / (1024 * 1024), 2),
+            "created": datetime.fromtimestamp(stat.st_ctime).isoformat(),
+        })
+    return {"recordings": recordings, "count": len(recordings)}
+
+
+@app.get("/api/recordings/{filename}")
+async def download_recording(filename: str):
+    """Tải video đã ghi."""
+    from fastapi.responses import FileResponse
+    filepath = RECORDINGS_DIR / filename
+
+    if not filepath.exists():
+        raise HTTPException(status_code=404, detail="File không tồn tại")
+
+    return FileResponse(
+        filepath,
+        media_type="video/mp4",
+        filename=filename,
+    )
 
 
 # ============================================================
