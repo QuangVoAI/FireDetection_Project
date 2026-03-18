@@ -64,12 +64,6 @@ def post_comment(issue_number, body):
     resp = requests.post(url, headers=headers, json={"body": body})
     resp.raise_for_status()
 
-def create_progress_bar(percentage, length=25):
-    """Vẽ thanh trạng thái biểu đồ Ascii cực đẹp."""
-    filled = int(length * percentage // 100)
-    bar = '█' * filled + '░' * (length - filled)
-    return f"`[{bar}] {percentage:.1f}%`"
-
 def main():
     if not RF_API_KEY:
         print("LỖI: Chưa cấu hình Secret ROBOFLOW_API_KEY trên GitHub.")
@@ -87,8 +81,8 @@ def main():
     # Soạn thảo Format chuyên nghiệp
     report_lines = [f"## 🎯 Cập nhật Ngày {now}\n"]
     
-    report_lines.append("### 🦉 Nhiệm vụ (KPI) Hôm nay:")
-    report_lines.append("Mỗi sếp gán nhãn ít nhất **100 ảnh**. Xong việc thì tick vào ô vuông bên dưới để Cú Xanh Duolingo tha mạng:")
+    report_lines.append(f"### 🦉 Nhiệm vụ (KPI) Ngày {now.split(' ')[0]}:")
+    report_lines.append("Mỗi sếp gán nhãn ít nhất **100 ảnh**. Xong việc thì tick vào ô vuông bên dưới để Cú Xanh Duolingo tha mạng:\n")
     report_lines.append("- [ ] @springwang_08")
     report_lines.append("- [ ] @hoangxuanthanh2811")
     report_lines.append("---\n")
@@ -102,9 +96,6 @@ def main():
         unannotated = proj.get("unannotated", 0)
         annotated = total_images - unannotated
         percentage = (annotated / total_images * 100) if total_images > 0 else 0
-        
-        # Biểu đồ thanh tiến trình
-        progress_bar = create_progress_bar(percentage)
         
         # Thống kê Classes và Cảnh báo MẤT CÂN BẰNG DATA
         classes = proj.get("classes", {})
@@ -130,10 +121,10 @@ def main():
                     rf_proj = rf.workspace(WORKSPACE).project(project_id_slug)
                     
                     print(f"Đang gửi lệnh kích hoạt Đóng gói Version cho {name}...")
-                    # Generate dựa trên config default (512x512) có sẵn của workspace
-                    new_version = rf_proj.generate_version(settings={})
+                    # Giải quyết triệt để lỗi thiếu dictionary dict() của Roboflow SDK
+                    new_version = rf_proj.generate_version(settings={"augmentation": {}, "preprocessing": {}})
                     v_num = new_version.version
-                    warnings_str += f" Bot MLOps đã GỬI LỆNH THÀNH CÔNG đúc ra phiên bản **Version {v_num}** trên máy chủ Roboflow!\n"
+                    warnings_str += f"\n- Bot MLOps đã GỬI LỆNH THÀNH CÔNG đúc ra phiên bản **Version {v_num}** trên máy chủ Roboflow!\n"
                     
                     # Tự động thực thi Luồng 2 (Export & Zip) ngay tại đây
                     print(f"🤖 100% Kích hoạt cơ chế Clone! Tải Version {v_num} chuẩn YOLOv8 về kho...")
@@ -153,7 +144,6 @@ def main():
 
         # Markdown Block cho mỗi project
         proj_report = f"""### 📁 Tiêu điểm: **{name}**
-{progress_bar}
 - 🟢 **Hoàn thành:** {annotated} / {total_images} ảnh
 - 🔴 **Tồn đọng:** {unannotated} ảnh chờ xử lý
 - 🏷 **Nhãn dữ liệu (Classes):** {classes_str}{warnings_str}
@@ -169,8 +159,8 @@ def main():
     post_comment(issue_number, final_report)
     
     # Bắn Discord sau khi xong (Nếu có kênh)
-    short_summary = f"🤖 **[MLOps Bot]** Cập nhật báo cáo tiến độ!\nĐã thẩm định xong **{len(projects)}** dự án Dataset. Truy cập tab *Issues* trên GitHub để chấm công và đọc Cảnh báo Mất Cân Bằng (nếu có) nhé Thành và Quang ơi!"
-    send_discord_alert(short_summary)
+    discord_msg = final_report + "\n\n👉 *Vào Github Issues tick xanh để hoàn thành chấm công nhé!*"
+    send_discord_alert(discord_msg)
     
     print("🎉 Hoàn tất MLOps Pipeline! Bảng tin đã được dán lên Issue.")
 
