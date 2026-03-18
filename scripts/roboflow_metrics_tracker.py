@@ -20,24 +20,18 @@ def get_all_projects_stats():
     # Móc ra mảng projects chứa danh sách vô số các dataset
     return resp.json().get("workspace", {}).get("projects", [])
 
-def send_zalo_alert(message):
-    """Gửi cảnh báo qua nền tảng Zalo OA nếu có cài đặt."""
-    access_token = os.environ.get("ZALO_ACCESS_TOKEN")
-    user_id = os.environ.get("ZALO_USER_ID")
-    if access_token and user_id:
+def send_discord_alert(message):
+    """Gửi cảnh báo qua nền tảng Discord (Siêu dễ và nhanh)."""
+    webhook_url = os.environ.get("DISCORD_WEBHOOK_URL")
+    if webhook_url:
         try:
-            url = "https://openapi.zalo.me/v3.0/oa/message/text"
-            headers = {
-                "access_token": access_token,
-                "Content-Type": "application/json"
-            }
             payload = {
-                "recipient": {"user_id": user_id},
-                "message": {"text": message}
+                "content": message,
+                "username": "MLOps Bot 🔥"
             }
-            requests.post(url, headers=headers, json=payload)
+            requests.post(webhook_url, json=payload)
         except Exception as e:
-            print("Zalo send error:", e)
+            print("Discord send error:", e)
 
 def get_or_create_issue():
     """Tìm Bảng tin (Issue) Dashboard, nếu chưa có thì tạo mới."""
@@ -157,9 +151,9 @@ def main():
     print(f"Bắn báo cáo vào Issue #{issue_number}...")
     post_comment(issue_number, final_report)
     
-    # Bắn Zalo sau khi xong (Nếu có cài đặt Bot)
-    short_summary = f"🤖 [MLOps Bot] Cập nhật tiến độ Team:\nĐã thẩm định {len(projects)} dự án dataset. Vui lòng vào tab Issues trên GitHub để đọc báo cáo Cảnh báo Mất Cân Bằng Data (nếu có) nhé Xuân Thành và Quang!"
-    send_zalo_alert(short_summary)
+    # Bắn Discord sau khi xong (Nếu có kênh)
+    short_summary = f"🤖 **[MLOps Bot]** Cập nhật báo cáo tiến độ!\nĐã thẩm định xong **{len(projects)}** dự án Dataset. Truy cập tab *Issues* trên GitHub để chấm công và đọc Cảnh báo Mất Cân Bằng (nếu có) nhé Thành và Quang ơi!"
+    send_discord_alert(short_summary)
     
     print("🎉 Hoàn tất MLOps Pipeline! Bảng tin đã được dán lên Issue.")
 

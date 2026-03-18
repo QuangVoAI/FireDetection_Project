@@ -29,6 +29,5 @@ jobs:
           ROBOFLOW_WORKSPACE: "springwangs-workspace"
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
-          ZALO_ACCESS_TOKEN: ${{ secrets.ZALO_ACCESS_TOKEN }}
-          ZALO_USER_ID: ${{ secrets.ZALO_USER_ID }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
         run: python scripts/roboflow_metrics_tracker.py
