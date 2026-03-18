@@ -1,0 +1,52 @@
+name: MLOps Dataset Export & Pack Pipeline
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_idx:
+        description: 'Số thứ tự Version đã Generate trên Roboflow (Ví dụ: 1, 2, 3)'
+        required: true
+        default: '1'
+
+jobs:
+  export_dataset:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: pip install roboflow requests
+
+      - name: 🚀 Tải Dữ liệu Dataset chuẩn YOLOv8 từ Roboflow
+        env:
+          ROBOFLOW_API_KEY: ${{ secrets.ROBOFLOW_API_KEY }}
+          ROBOFLOW_WORKSPACE: "springwangs-workspace"
+          ROBOFLOW_PROJECT: "firedetection_project"
+          VERSION_IDX: ${{ github.event.inputs.version_idx }}
+        run: python scripts/dataset_exporter.py
+
+      - name: 🗄️ Đóng gói thành siêu Tệp Nén (ZIP)
+        run: |
+          V_IDX=${{ github.event.inputs.version_idx }}
+          if [ -d "dataset_export_v${V_IDX}" ]; then
+            zip -r dataset_yolov8_v${V_IDX}.zip dataset_export_v${V_IDX}/
+            echo "Đóng gói ZIP thành công!"
+          else
+            echo "Lỗi: Không tìm thấy thư mục tải về. Sinh file rỗng thay thế."
+            touch dataset_yolov8_v${V_IDX}.zip
+            exit 1
+          fi
+
+      - name: 📦 Lưu trữ an toàn lên GitHub Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dataset-yolov8-v${{ github.event.inputs.version_idx }}-backup
+          path: dataset_yolov8_v${{ github.event.inputs.version_idx }}.zip
+          retention-days: 90

@@ -1,4 +1,4 @@
-name: MLOps Dataset Progress Tracker
+name: MLOps Multi-Dataset Progress Tracker
 
 on:
   schedule:
@@ -21,13 +21,14 @@ jobs:
           python-version: '3.10'
 
       - name: Install Dependencies
-        run: pip install requests
+        run: pip install requests roboflow
 
       - name: Fetch and Report Dashboard
         env:
           ROBOFLOW_API_KEY: ${{ secrets.ROBOFLOW_API_KEY }}
           ROBOFLOW_WORKSPACE: "springwangs-workspace"
-          ROBOFLOW_PROJECT: "firedetection_project"
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
+          ZALO_ACCESS_TOKEN: ${{ secrets.ZALO_ACCESS_TOKEN }}
+          ZALO_USER_ID: ${{ secrets.ZALO_USER_ID }}
         run: python scripts/roboflow_metrics_tracker.py
