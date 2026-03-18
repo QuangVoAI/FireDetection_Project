@@ -25,21 +25,23 @@ def get_latest_issue_report():
     
     # Rút trích Dòng trạng thái (Comment) mới nhất do MLOps Bot viết
     latest_comment = comments[-1]["body"]
-    return latest_comment
+    return latest_comment, issue_number
 
-def send_discord_ping(targets):
+def send_discord_ping(targets, issue_number):
     if not WEBHOOK or not targets: return
     
     mentions = " ".join(targets)
-    msg = f"🦉 **[CÚ XANH DUOLINGO]** Éc éc! Tới giờ kiểm điểm!\nCác đồng chí {mentions} chưa hoàn thành KPI 100 ảnh ngày hôm nay! Mau rủ nhau vào Roboflow gán nhãn, gán xong nhớ vào Github Issue bấm ✅ (Tick) chấm công kẻo Cú mổ nhé!"
+    msg = f"🦉 **[CÚ XANH DUOLINGO]** Éc éc! Trễ deadline rồi!\nCác đồng chí {mentions} chưa hoàn thành KPI 100 ảnh ngày hôm nay!\n\n🏃‍♂️ **CÁCH TRỐN KHỎI CÚ XANH:**\n1. Mở web Roboflow gán đủ số lượng ảnh KPI.\n2. Click ngay vào Link này: https://github.com/{REPO}/issues/{issue_number}\n3. Sửa cái ô vuông `- [ ]` cạnh tên bạn thành `- [x]` để hoàn tất chấm công nhé!"
     payload = {"content": msg, "username": "Duolingo Cú Xanh 🦉", "avatar_url": "https://www.duolingo.com/images/facebook/duo200.png"}
     requests.post(WEBHOOK, json=payload)
 
 def main():
-    body = get_latest_issue_report()
-    if not body:
+    result = get_latest_issue_report()
+    if not result:
         print("Không có báo cáo nào để kiểm tra.")
         return
+        
+    body, issue_number = result
         
     # Máy soi kĩ thuật kiểm tra ô vuông
     slackers = []
@@ -52,7 +54,7 @@ def main():
         
     if slackers:
         print(f"Phát hiện trốn việc: {slackers}. Gửi Cú Xanh gõ đầu...")
-        send_discord_ping(slackers)
+        send_discord_ping(slackers, issue_number)
     else:
         print("Ai cũng đã tick xong nhiệm vụ. Cú Xanh đi ngủ hiền hoà.")
 

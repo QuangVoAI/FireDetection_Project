@@ -159,7 +159,7 @@ def main():
     post_comment(issue_number, final_report)
     
     # Bắn Discord sau khi xong (Nếu có kênh)
-    discord_msg = final_report + "\n\n👉 *Vào Github Issues tick xanh để hoàn thành chấm công nhé!*"
+    discord_msg = final_report + f"\n\n👉 **HƯỚNG DẪN CHẤM CÔNG (KHỎI BỊ CÚ XANH GÕ ĐẦU):**\n1️⃣ Click vào Link Báo Cáo gốc: https://github.com/{REPO}/issues/{issue_number}\n2️⃣ Tìm dòng chữ `- [ ] @tên-của-bạn`, bấm Edit (Sửa) dấu khoảng trắng thành dấu x thường `- [x]`.\n3️⃣ Save lại và đi ngủ!"
     send_discord_alert(discord_msg)
     
     print("🎉 Hoàn tất MLOps Pipeline! Bảng tin đã được dán lên Issue.")
