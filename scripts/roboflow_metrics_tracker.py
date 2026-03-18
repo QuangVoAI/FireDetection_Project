@@ -86,6 +86,13 @@ def main():
     
     # Soạn thảo Format chuyên nghiệp
     report_lines = [f"## 🎯 Cập nhật Ngày {now}\n"]
+    
+    report_lines.append("### 🦉 Nhiệm vụ (KPI) Hôm nay:")
+    report_lines.append("Mỗi sếp gán nhãn ít nhất **100 ảnh**. Xong việc thì tick vào ô vuông bên dưới để Cú Xanh Duolingo tha mạng:")
+    report_lines.append("- [ ] @springwang_08")
+    report_lines.append("- [ ] @hoangxuanthanh2811")
+    report_lines.append("---\n")
+    
     report_lines.append(f"**Tổng số Datasets đang theo dõi:** {len(projects)}")
     report_lines.append("---\n")
     
@@ -126,7 +133,17 @@ def main():
                     # Generate dựa trên config default (512x512) có sẵn của workspace
                     new_version = rf_proj.generate_version(settings={})
                     v_num = new_version.version
-                    warnings_str += f" Bot MLOps đã GỬI LỆNH THÀNH CÔNG đúc ra phiên bản **Version {v_num}** trên máy chủ Roboflow! Bạn có thể sử dụng tính năng Export để tải về."
+                    warnings_str += f" Bot MLOps đã GỬI LỆNH THÀNH CÔNG đúc ra phiên bản **Version {v_num}** trên máy chủ Roboflow!\n"
+                    
+                    # Tự động thực thi Luồng 2 (Export & Zip) ngay tại đây
+                    print(f"🤖 100% Kích hoạt cơ chế Clone! Tải Version {v_num} chuẩn YOLOv8 về kho...")
+                    warnings_str += f" - 📦 **Tự động trích xuất:** Đang tải dataset rễ YOLOv8 về Github Actions Artifacts..."
+                    folder_name = f"dataset_{project_id_slug}_v{v_num}"
+                    new_version.download("yolov8", location=folder_name)
+                    os.system(f"zip -r {folder_name}.zip {folder_name}/")
+                    warnings_str += f" ✅ Đã nén ZIP và niêm phong thành công tệp gốc vào kho Github!"
+                    print(f"✅ Nén xong ZIP: {folder_name}.zip")
+                    
                 except Exception as e:
                     err_msg = str(e).lower()
                     if "no changes" in err_msg or "identical" in err_msg:

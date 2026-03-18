@@ -1,0 +1,28 @@
+name: Duolingo Cú Xanh (KPI Checker)
+
+on:
+  schedule:
+    - cron: '0 2,5,8,11,14 * * *' # Báo thức lúc 9h, 12h, 15h, 18h, 21h (Giờ VN)
+  workflow_dispatch: # Nút test thủ công
+
+jobs:
+  check_kpi:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: 🦉 Triệu hồi Cú Xanh đòi nợ Data
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: python scripts/duolingo_bot.py

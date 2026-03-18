@@ -31,3 +31,10 @@ jobs:
           GITHUB_REPOSITORY: ${{ github.repository }}
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
         run: python scripts/roboflow_metrics_tracker.py
+
+      - name: 📦 Thu gom các Cục ZIP Dataset (nếu có bản v mới MLOps vừa đúc ra)
+        uses: actions/upload-artifact@v4
+        with:
+          name: Auto-MLOps-Dataset-Backups
+          path: "*.zip"
+          retention-days: 90
