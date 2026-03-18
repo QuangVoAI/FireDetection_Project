@@ -1,0 +1,33 @@
+name: MLOps Dataset Progress Tracker
+
+on:
+  schedule:
+    - cron: '0 17 * * *' # Chạy tự động lúc 00:00 hằng ngày (17:00 UTC)
+  workflow_dispatch:      # Nút bấm thủ công
+
+jobs:
+  track_metrics:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install Dependencies
+        run: pip install requests
+
+      - name: Fetch and Report Dashboard
+        env:
+          ROBOFLOW_API_KEY: ${{ secrets.ROBOFLOW_API_KEY }}
+          ROBOFLOW_WORKSPACE: "springwangs-workspace"
+          ROBOFLOW_PROJECT: "firedetection_project"
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: python scripts/roboflow_metrics_tracker.py
