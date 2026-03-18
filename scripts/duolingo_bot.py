@@ -31,7 +31,11 @@ def send_discord_ping(targets, issue_number):
     if not WEBHOOK or not targets: return
     
     mentions = " ".join(targets)
-    msg = f"🦉 **[CÚ XANH DUOLINGO]** Éc éc! Trễ deadline rồi!\nCác đồng chí {mentions} chưa hoàn thành KPI 100 ảnh ngày hôm nay!\n\n🏃‍♂️ **CÁCH TRỐN KHỎI CÚ XANH:**\n1. Mở web Roboflow gán đủ số lượng ảnh KPI.\n2. Click ngay vào Link này: https://github.com/{REPO}/issues/{issue_number}\n3. Sửa cái ô vuông `- [ ]` cạnh tên bạn thành `- [x]` để hoàn tất chấm công nhé!"
+    # Bỏ mặt nạ Github, lột xác thành Discord Tags để réo điện thoại
+    mentions = mentions.replace("@springwang_08", "<@770639864760631296>")
+    mentions = mentions.replace("@hoangxuanthanh2811", "<@1256982686145183785>")
+    
+    msg = f"🦉 **[CÚ XANH DUOLINGO]** Éc éc! Trễ deadline rồi!\nCác đồng chí {mentions} chưa hoàn thành KPI 100 ảnh ngày hôm nay!\n\n🏃‍♂️ **CÁCH TRỐN KHỎI CÚ XANH (Chiêu lười):**\n1. Mở web Roboflow gán đủ 100 ảnh.\n2. Bấm Link này vào thẳng Github: https://github.com/{REPO}/issues/{issue_number}\n3. Lấy chuột **NHẤN VÀO CÁI Ô VUÔNG** cạnh tên bạn cho nó hiện dấu Check ✅ (Hệ thống sẽ tự Save). Xong!"
     payload = {"content": msg, "username": "Duolingo Cú Xanh 🦉", "avatar_url": "https://www.duolingo.com/images/facebook/duo200.png"}
     requests.post(WEBHOOK, json=payload)
 

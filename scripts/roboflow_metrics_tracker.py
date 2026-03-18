@@ -1,6 +1,6 @@
 import os
 import requests
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from roboflow import Roboflow
 
 # ==========================================
@@ -76,12 +76,16 @@ def main():
         print(f"Lỗi nối API: {e}")
         return
     
-    now = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+    # Cấu trúc thời gian chuẩn GMT+7 (Việt Nam) thay vì giờ Mỹ (UTC)
+    now_utc = datetime.now(timezone.utc)
+    now_gmt7 = now_utc + timedelta(hours=7)
+    now = now_gmt7.strftime("%d/%m/%Y %H:%M:%S")
+    today_date = now_gmt7.strftime("%d/%m/%Y")
     
     # Soạn thảo Format chuyên nghiệp
     report_lines = [f"## 🎯 Cập nhật Ngày {now}\n"]
     
-    report_lines.append(f"### 🦉 Nhiệm vụ (KPI) Ngày {now.split(' ')[0]}:")
+    report_lines.append(f"### 🦉 Nhiệm vụ (KPI) Ngày {today_date}:")
     report_lines.append("Mỗi sếp gán nhãn ít nhất **100 ảnh**. Xong việc thì tick vào ô vuông bên dưới để Cú Xanh Duolingo tha mạng:\n")
     report_lines.append("- [ ] @springwang_08")
     report_lines.append("- [ ] @hoangxuanthanh2811")
@@ -121,16 +125,19 @@ def main():
                     rf_proj = rf.workspace(WORKSPACE).project(project_id_slug)
                     
                     print(f"Đang gửi lệnh kích hoạt Đóng gói Version cho {name}...")
-                    # Giải quyết triệt để lỗi thiếu dictionary dict() của Roboflow SDK
-                    new_version = rf_proj.generate_version(settings={"augmentation": {}, "preprocessing": {}})
-                    v_num = new_version.version
+                    # Sửa lỗi 'int' của hệ thống Roboflow (Hàm này trả về con số Version thay vì cái Object)
+                    v_num = rf_proj.generate_version(settings={"augmentation": {}, "preprocessing": {}})
                     warnings_str += f"\n- Bot MLOps đã GỬI LỆNH THÀNH CÔNG đúc ra phiên bản **Version {v_num}** trên máy chủ Roboflow!\n"
                     
                     # Tự động thực thi Luồng 2 (Export & Zip) ngay tại đây
                     print(f"🤖 100% Kích hoạt cơ chế Clone! Tải Version {v_num} chuẩn YOLOv8 về kho...")
                     warnings_str += f" - 📦 **Tự động trích xuất:** Đang tải dataset rễ YOLOv8 về Github Actions Artifacts..."
                     folder_name = f"dataset_{project_id_slug}_v{v_num}"
-                    new_version.download("yolov8", location=folder_name)
+                    
+                    # Gọi Object Version thực thụ ra để tải
+                    new_version_obj = rf_proj.version(v_num)
+                    new_version_obj.download("yolov8", location=folder_name)
+                    
                     os.system(f"zip -r {folder_name}.zip {folder_name}/")
                     warnings_str += f" ✅ Đã nén ZIP và niêm phong thành công tệp gốc vào kho Github!"
                     print(f"✅ Nén xong ZIP: {folder_name}.zip")
@@ -159,7 +166,12 @@ def main():
     post_comment(issue_number, final_report)
     
     # Bắn Discord sau khi xong (Nếu có kênh)
-    discord_msg = final_report + f"\n\n👉 **HƯỚNG DẪN CHẤM CÔNG (KHỎI BỊ CÚ XANH GÕ ĐẦU):**\n1️⃣ Click vào Link Báo Cáo gốc: https://github.com/{REPO}/issues/{issue_number}\n2️⃣ Tìm dòng chữ `- [ ] @tên-của-bạn`, bấm Edit (Sửa) dấu khoảng trắng thành dấu x thường `- [x]`.\n3️⃣ Save lại và đi ngủ!"
+    discord_msg = final_report + f"\n\n👉 **HƯỚNG DẪN CHẤM CÔNG CỰC NHANH:**\n1️⃣ Click Link Báo Cáo gốc: https://github.com/{REPO}/issues/{issue_number}\n2️⃣ Dùng chuột NHẤN TRỰC TIẾP vào cái ô vuông trống `[ ]` cạnh tên bạn (Github sẽ tự động đánh dấu Check và tự Save ngầm lại). Bạn KHÔNG CẦN phải bấm Edit hay gõ chữ x đâu nhé!\n3️⃣ Tắt trình duyệt và đi ngủ!"
+    
+    # Biến hình tài khoản Github thành ID Discord để Réo Chuông Điện Thoại!
+    discord_msg = discord_msg.replace("@springwang_08", "<@770639864760631296>")
+    discord_msg = discord_msg.replace("@hoangxuanthanh2811", "<@1256982686145183785>")
+    
     send_discord_alert(discord_msg)
     
     print("🎉 Hoàn tất MLOps Pipeline! Bảng tin đã được dán lên Issue.")
