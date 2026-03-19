@@ -26,12 +26,21 @@ def get_latest_issue_report():
     comments_url = f"https://api.github.com/repos/{REPO}/issues/{latest_issue}/comments"
     resp = requests.get(comments_url, headers=headers)
     comments = resp.json()
-    if not comments:
-        return None
     
-    # Rút trích Dòng trạng thái (Comment) mới nhất do MLOps Bot viết
-    latest_comment = comments[-1]["body"]
-    return latest_comment, latest_issue
+    # CHIẾN THUẬT QUÉT THÔNG MINH:
+    # Quét ngược danh sách comment từ dưới lên để tìm đúng bài báo cáo của Bot (dù user có comment tám chuyện)
+    if isinstance(comments, list):
+        for comment in reversed(comments):
+            if "### 🦉 Nhiệm vụ" in comment.get("body", ""):
+                print(f"✅ Tìm thấy bản báo cáo mới nhất trong comment.")
+                return comment["body"], latest_issue
+    
+    # Nếu không thấy trong comment, kiểm tra chính phần thân Issue (Issue Body)
+    if "### 🦉 Nhiệm vụ" in issues[0].get("body", ""):
+        print(f"✅ Tìm thấy bản báo cáo trong phần Issue Body.")
+        return issues[0]["body"], latest_issue
+        
+    return None
 
 def send_discord_ping(targets, issue_number):
     if not WEBHOOK or not targets: return
