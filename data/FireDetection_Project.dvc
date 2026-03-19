@@ -1,5 +1,5 @@
 outs:
-    - md5: 906a76981a1ab8ab8cd24db1456933f5.dir
-      size: 85197750
+    - md5: 86479cfdfaaff8ff20f15b561b0e734c.dir
+      size: 104185855
       path: FireDetection_Project
-      nfiles: 302
+      nfiles: 402
