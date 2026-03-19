@@ -31,7 +31,7 @@ def get_latest_issue_report():
     
     # Rút trích Dòng trạng thái (Comment) mới nhất do MLOps Bot viết
     latest_comment = comments[-1]["body"]
-    return latest_comment, issue_number
+    return latest_comment, latest_issue
 
 def send_discord_ping(targets, issue_number):
     if not WEBHOOK or not targets: return
