@@ -11,6 +11,9 @@ env:
 jobs:
   check_kpi:
     runs-on: ubuntu-latest
+    permissions:
+      issues: write   # Cần quyền này để đọc/ghi báo cáo KPI
+      contents: read  # Cần quyền này để Checkout code
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
