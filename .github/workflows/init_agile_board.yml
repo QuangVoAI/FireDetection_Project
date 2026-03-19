@@ -1,0 +1,27 @@
+name: Lắp đặt Bảng Kế Hoạch Agile (Tạo Tickets Tự động)
+
+on: workflow_dispatch # Chỉ chạy bằng tay 1 lần duy nhất
+
+permissions:
+  issues: write # Cấp quyền ghi bảng Issues cho lệnh API
+
+jobs:
+  create-tickets:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Cài đặt Requests
+        run: pip install requests
+
+      - name: 🚀 Bắn Bảng Kế Hoạch Master Lên GitHub Issues
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: python scripts/init_agile_tickets.py

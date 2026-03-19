@@ -85,8 +85,8 @@ def main():
     # Soạn thảo Format chuyên nghiệp
     report_lines = [f"## 🎯 Cập nhật Ngày {now}\n"]
     
-    report_lines.append(f"### 🦉 Nhiệm vụ (KPI) Ngày {today_date}:")
-    report_lines.append("Mỗi sếp gán nhãn ít nhất **100 ảnh**. Xong việc thì tick vào ô vuông bên dưới để Cú Xanh Duolingo tha mạng:\n")
+    report_lines.append(f"### 🦉 Nhiệm vụ (KPI KHÓA LUẬN) Ngày {today_date}:")
+    report_lines.append("Mỗi sếp gán nhãn ít nhất **150 ảnh** (Mỗi người nạp ít nhất 20 'Ảnh Nền/Ảnh Lừa' chụp hoàng hôn/sương mù không Fire). Xong việc thì tick vào ô vuông bên dưới để Cú Xanh Duolingo tha mạng:\n")
     report_lines.append("- [ ] @springwang_08")
     report_lines.append("- [ ] @hoangxuanthanh2811")
     report_lines.append("---\n")
