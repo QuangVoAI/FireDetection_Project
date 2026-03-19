@@ -5,6 +5,10 @@ on:
     - cron: '0 2,5,8,11,14 * * *' # Báo thức lúc 9h, 12h, 15h, 18h, 21h (Giờ VN)
   workflow_dispatch: # Nút test thủ công
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true # Tắt cảnh báo Node20 lỗi thời
+  ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
+
 jobs:
   check_kpi:
     runs-on: ubuntu-latest
