@@ -48,7 +48,11 @@ def scan_local_data():
     
     for folder, target in DATASET_KPIS.items():
         label_path = data_path / folder / "labels"
-        annotated_files = list(label_path.glob("*.txt")) if label_path.exists() else []
+        # Loại trừ classes.txt khỏi danh sách file đếm (để không bị đếm nhầm là 1 ảnh)
+        if label_path.exists():
+            annotated_files = [f for f in label_path.glob("*.txt") if f.name != "classes.txt"]
+        else:
+            annotated_files = []
         
         # Đếm chi tiết Class (Class Balance)
         class_counts = {0: 0, 1: 0}
