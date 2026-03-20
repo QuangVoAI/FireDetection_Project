@@ -1,0 +1,5 @@
+outs:
+    - md5: 56a3da28644a692d1ea5ef02ae51e911.dir
+      size: 1021
+      path: NonLabelThanh
+      nfiles: 2
