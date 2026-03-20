@@ -1,5 +1,5 @@
 outs:
-    - md5: 20ba076ed9c1fbdea2f57622e66923ed.dir
-      size: 66828324
+    - md5: 78a2a7a3d942f6e6d51b98ce873d6b94.dir
+      size: 92979649
       path: NonLabelThanh
-      nfiles: 202
+      nfiles: 302
