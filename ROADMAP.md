@@ -64,3 +64,12 @@ Tài liệu này hệ thống lại quy trình thực hiện đồ án, tập tr
 
 ---
 *Cập nhật tự động dựa vào tiến trình làm việc mới nhất (Đã gán nhãn 3.623 ảnh và hoàn thành API pipeline).*
+
+---
+
+## 📌 Ghi chú Kỹ thuật cốt lõi (Technical Memory)
+> [!IMPORTANT]
+> **Về việc giữ nhãn Polygon (Mặt nạ chóp đa giác):**
+> - Khi tải dữ liệu từ Roboflow, bắt buộc chọn **YOLOv8 Instance Segmentation**.
+> - Khi viết Code Python huấn luyện qua Ultralytics, **TUYỆT ĐỐI BẮT BUỘC** khai báo model có vần `-seg.pt` (Ví dụ: `yolov8n-seg.pt` hoặc `yolo11n-seg.pt`). 
+> - Nếu nạp nhầm model `.pt` thường (Object Detection), toàn bộ công sức gán nhãn Polygon viền khít của hơn 23.000 ảnh sẽ bị thư viện ép vuông thành Bounding Box (Mất hoàn toàn lợi thế độ tinh khiết ảnh).
