@@ -33,8 +33,8 @@ data/03_Negative_Hard_Samples/images/
 data/03_Negative_Hard_Samples/labels/
 data/04_SAHI_Small_Objects/images/
 data/04_SAHI_Small_Objects/labels/
-data/05_Real_Situation/images/
-data/05_Real_Situation/labels/
+data/05_Ambient_Context_Null/images/
+data/05_Ambient_Context_Null/labels/
 
 # --- Model Weights ---
 *.pt
