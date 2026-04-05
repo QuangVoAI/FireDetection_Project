@@ -6,15 +6,15 @@ Tài liệu này hệ thống lại quy trình thực hiện đồ án, tập tr
 ---
 
 ## 🟢 Task 1: Xây dựng Tập dữ liệu Chuẩn Production (Data Acquisition) - [ĐANG THỰC HIỆN]
-Đây là giai đoạn quan trọng nhất, quyết định thành bại của đồ án. Áp dụng chuẩn **Data-centric AI**, gán nhãn ở cấp độ **Pixel (Polygon Mask)** để đạt độ tinh khiết tối đa thay vì dạng Bounding Box thông thường. Toàn bộ tập dữ liệu hướng tới quy mô khổng lồ: **~23.000 ảnh**.
+Đây là giai đoạn quan trọng nhất, quyết định thành bại của đồ án. Áp dụng chuẩn **Data-centric AI**, gán nhãn ở cấp độ **Pixel (Polygon Mask)** để đạt độ tinh khiết tối đa thay vì dạng Bounding Box thông thường. Toàn bộ tập dữ liệu hướng tới quy mô: **~29.500 ảnh** *(cân đối lại do thư mục 01 vượt mục tiêu)*.
 
 * **Quản trị Data trên Roboflow:** Sử dụng duy nhất 1 Project (`FireDetection_Master`), dùng tính năng **Tags** (vd: `01_positive_standard`) để phân loại ảnh rạch ròi.
 * **Phân bổ cấu trúc 5 lớp dữ liệu (Curriculum Learning):**
-  1. `01_Positive_Standard` **(~7.500 ảnh / 32%):** Ảnh lửa bùng phát, khói rõ ràng. Đây là lớp nền tảng để model học hình khối/màu sắc cơ bản của ngọn lửa/khói. *(Đang hoàn thiện, đã vượt mốc 6.100 ảnh).*
-  2. `02_Alley_Context` **(~5.000 ảnh / 22%):** Bối cảnh thực tế nhà cửa, dây điện chằng chịt, hẻm nhỏ hẹp đặc thù tại TP.HCM. Giúp model làm quen không gian đô thị phức tạp.
-  3. `03_Negative_Hard_Samples` **(~3.500 ảnh / 15%):** Ánh đèn Neon đỏ, sương mù, khói bún bò xe hủ tiếu, đèn hậu xe máy. *Lưu ý: Không vẽ nhãn Polygon nào ở tập này.* Nhằm trừng phạt hàm Loss, triệt tiêu hoàn toàn khả năng báo động giả (False Positive).
-  4. `04_SAHI_Small_Objects` **(~5.000 ảnh / 22%):** Đốm lửa/khói cực kỳ nhỏ bé, chụp từ góc cao hoặc flycam. Lớp dữ liệu bản lề giúp mô hình phát huy sức mạnh Cảnh Báo Sớm (Early Warning) khi kết hợp cùng công nghệ SAHI.
-  5. `05_Real_Situation` **(~2.000 ảnh / 9%):** Hiện trường thực chiến ban đêm, khói mịt mù, vòi rồng cứu hỏa, nước phun, lính cứu hỏa. Bài Test khắt khe nhất để kiểm chứng tính chống chịu (Robustness).
+  1. `01_Positive_Standard` **(12.000 ảnh / 41%):** Ảnh lửa bùng phát, khói rõ ràng. Đây là lớp nền tảng để model học hình khối/màu sắc cơ bản của ngọn lửa/khói. *(✅ Đã hoàn thành — gấp 1.6x mục tiêu ban đầu 7.500).*
+  2. `02_Alley_Context` **(~5.000 ảnh / 17%):** Bối cảnh thực tế nhà cửa, dây điện chằng chịt, hẻm nhỏ hẹp đặc thù tại TP.HCM. Giúp model làm quen không gian đô thị phức tạp.
+  3. `03_Negative_Hard_Samples` **(~5.500 ảnh / 19%):** Ánh đèn Neon đỏ, sương mù, khói bún bò xe hủ tiếu, đèn hậu xe máy. *Lưu ý: Không vẽ nhãn Polygon nào ở tập này.* Nhằm trừng phạt hàm Loss, triệt tiêu hoàn toàn khả năng báo động giả (False Positive). *(⬆️ Tăng từ 3.500 → 5.500 để cân đối tỷ lệ negative/positive khi 01 tăng lên 12K).*
+  4. `04_SAHI_Small_Objects` **(~5.000 ảnh / 17%):** Đốm lửa/khói cực kỳ nhỏ bé, chụp từ góc cao hoặc flycam. Lớp dữ liệu bản lề giúp mô hình phát huy sức mạnh Cảnh Báo Sớm (Early Warning) khi kết hợp cùng công nghệ SAHI.
+  5. `05_Real_Situation` **(~2.000 ảnh / 6%):** Hiện trường thực chiến ban đêm, khói mịt mù, vòi rồng cứu hỏa, nước phun, lính cứu hỏa. Bài Test khắt khe nhất để kiểm chứng tính chống chịu (Robustness).
 * **Tracking tự động:** Đã tích hợp API Github Actions & Roboflow (`roboflow_metrics_tracker.py`) để theo dõi tiến độ gán nhãn hàng ngày, tự động nhắc nhở tiến độ qua Discord.
 
 ---
@@ -63,7 +63,7 @@ Tài liệu này hệ thống lại quy trình thực hiện đồ án, tập tr
 * **Định vị chính xác:** Tích hợp Vietmap API đính kèm địa chỉ/tọa độ vào cảnh báo, hỗ trợ công tác cứu hộ nhanh chóng nhất.
 
 ---
-*Cập nhật tự động dựa vào tiến trình làm việc mới nhất (Đã gán nhãn 3.623 ảnh và hoàn thành API pipeline).*
+*Cập nhật lần cuối: 04/04/2026 — Thư mục 01 đã đạt 12.000+ ảnh (vượt mục tiêu 7.500). Label Bot (YOLOv8s-seg) đang được train lại với cấu hình cải tiến.*
 
 ---
 
@@ -72,4 +72,4 @@ Tài liệu này hệ thống lại quy trình thực hiện đồ án, tập tr
 > **Về việc giữ nhãn Polygon (Mặt nạ chóp đa giác):**
 > - Khi tải dữ liệu từ Roboflow, bắt buộc chọn **YOLOv8 Instance Segmentation**.
 > - Khi viết Code Python huấn luyện qua Ultralytics, **TUYỆT ĐỐI BẮT BUỘC** khai báo model có vần `-seg.pt` (Ví dụ: `yolov8n-seg.pt` hoặc `yolo11n-seg.pt`). 
-> - Nếu nạp nhầm model `.pt` thường (Object Detection), toàn bộ công sức gán nhãn Polygon viền khít của hơn 23.000 ảnh sẽ bị thư viện ép vuông thành Bounding Box (Mất hoàn toàn lợi thế độ tinh khiết ảnh).
+> - Nếu nạp nhầm model `.pt` thường (Object Detection), toàn bộ công sức gán nhãn Polygon viền khít của hơn 29.500 ảnh sẽ bị thư viện ép vuông thành Bounding Box (Mất hoàn toàn lợi thế độ tinh khiết ảnh).
