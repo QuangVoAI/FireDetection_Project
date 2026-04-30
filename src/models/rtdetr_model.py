@@ -104,12 +104,17 @@ class FireDetectionModel:
             print(f"   📦 Loading weights: {weights_path}")
             self.model = RTDETR(weights_path)
         else:
-            # Load pretrained weights từ Ultralytics
-            # RT-DETR-L pretrained trên COCO (80 classes)
-            # Ta sẽ fine-tune lại cho 2 classes (Fire, Smoke)
-            model_name = config.model.weights_path  # 'rtdetr-l.pt'
-            print(f"   📦 Loading pretrained: {model_name}")
-            self.model = RTDETR(model_name)
+            # Lấy variant hiện tại từ config
+            variant_name = config.model.active_variant
+            variant_info = config.model.variants[variant_name]
+            model_weights = variant_info.weights
+            
+            print(f"   🚀 Variant: {variant_name.upper()}")
+            print(f"   📦 Backbone: {variant_info.backbone}")
+            print(f"   📦 Loading weights: {model_weights}")
+            
+            # Khởi tạo model từ Ultralytics (RT-DETR)
+            self.model = RTDETR(model_weights)
 
         print(f"   ✅ Model loaded successfully!\n")
 
@@ -161,6 +166,25 @@ class FireDetectionModel:
         _batch = batch_size or self.config.training.batch_size
         _lr = learning_rate or self.config.training.learning_rate
 
+        # --- Initialize WandB ---
+        if self.config.wandb.enabled:
+            import wandb
+            # Login if API Key is available
+            api_key = self.config.wandb.get('api_key')
+            if api_key:
+                wandb.login(key=api_key)
+            
+            # Khởi tạo WandB Run
+            run_name = f"{self.config.model.active_variant}_{name}"
+            wandb.init(
+                project=self.config.wandb.project,
+                entity=self.config.wandb.entity,
+                name=run_name,
+                config=self.config.to_dict(),
+                job_type="training",
+                reinit=True
+            )
+
         print(f"\n🏋️ Bắt đầu Training")
         print(f"   Epochs:   {_epochs}")
         print(f"   Batch:    {_batch}")
@@ -192,6 +216,9 @@ class FireDetectionModel:
             flipud=self.config.augmentation.vertical_flip,
             fliplr=self.config.augmentation.horizontal_flip,
             mosaic=self.config.augmentation.mosaic_prob,
+            mixup=self.config.augmentation.get('mixup_prob', 0.0),
+            scale=self.config.augmentation.get('scale', 0.0),
+            translate=self.config.augmentation.get('translate', 0.0),
             degrees=self.config.augmentation.rotation_limit,
         )
 

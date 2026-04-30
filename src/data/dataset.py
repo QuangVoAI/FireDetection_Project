@@ -146,7 +146,7 @@ class FireSmokeDataset:
             labels_dir = folder_path / "labels"
 
             if not images_dir.exists():
-                print(f"   ⚠️  Không tìm thấy: {images_dir}")
+                print(f"   ⚠️  Bỏ qua thư mục (không tồn tại): {folder_name}")
                 continue
 
             # Duyệt tất cả ảnh

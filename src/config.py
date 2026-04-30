@@ -183,6 +183,10 @@ def _override_from_env(config: Config):
     if os.getenv("VIETMAP_API_KEY"):
         config.alert.vietmap.api_key = os.getenv("VIETMAP_API_KEY")
 
+    # --- WandB ---
+    if os.getenv("WANDB_API_KEY"):
+        config.wandb.api_key = os.getenv("WANDB_API_KEY")
+
 
 def get_device(config: Config) -> str:
     """

@@ -82,7 +82,9 @@ class Trainer:
         """
         self.model = model
         self.config = config
-        self.output_dir = Path(config.output.save_dir)
+        # Thư mục đầu ra phân tách theo model variant (vd: runs/baseline, runs/sota)
+        variant_name = config.model.get('active_variant', 'default')
+        self.output_dir = Path(config.output.save_dir) / variant_name
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
         # Lưu đường dẫn weights tốt nhất sau mỗi stage

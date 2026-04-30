@@ -12,11 +12,23 @@
 # num_classes: số lớp phát hiện (Fire=0, Smoke=1)
 # pretrained: dùng trọng số đã huấn luyện trước trên COCO
 model:
-  architecture: "rtdetr-l"        # RT-DETR-L (Large variant) — cân bằng giữa tốc độ và độ chính xác
+  active_variant: "baseline"      # Lựa chọn: baseline | data_plus_plus | sota
+  architecture: "rtdetr-l"        # RT-DETR-L (Large variant)
   img_size: 640                   # Input image size (pixels)
-  num_classes: 2                  # 0: Fire (Lửa), 1: Smoke (Khói)
-  pretrained: true                # Sử dụng pretrained weights từ COCO dataset
-  weights_path: "rtdetr-l.pt"    # Tên file weights mặc định từ Ultralytics
+  num_classes: 2                  # 0: Fire, 1: Smoke
+  pretrained: true
+  
+  # Định nghĩa các biến thể cho A/B Testing
+  variants:
+    baseline:
+      weights: "rtdetr-l.pt"       # Pretrained on COCO (chuẩn)
+      backbone: "ResNet-50"
+    data_plus_plus:
+      weights: "rtdetr-l-o365.pt"  # Pretrained on Objects365 (2M+ images)
+      backbone: "ResNet-50"
+    sota:
+      weights: "rf-detr-l.pt"      # RF-DETR với DINOv2 backbone (giả định)
+      backbone: "DINOv2"
 
 # --- Cấu hình Training ---
 # epochs: số vòng lặp huấn luyện
@@ -42,20 +54,20 @@ training:
       epochs: 80
       learning_rate: 0.0001
       data_folders:
-        - "01_Positive_Standard"
+        - "01_positive_standard"
         - "02_Alley_Context"
 
     hard_negative:
       epochs: 50
-      learning_rate: 0.00005       # LR nhỏ hơn vì fine-tuning
+      learning_rate: 0.00005
       data_folders:
-        - "01_Positive_Standard"
+        - "01_positive_standard"
         - "02_Alley_Context"
         - "03_Negative_Hard_Samples"
 
     sahi:
       epochs: 30
-      learning_rate: 0.00002       # LR rất nhỏ cho fine-tuning cuối
+      learning_rate: 0.00002
       data_folders:
         - "04_SAHI_Small_Objects"
         - "05_Ambient_Context_Null"
@@ -85,7 +97,10 @@ augmentation:
   saturation_limit: 30            # Thay đổi độ bão hòa
   blur_limit: 3                   # Mờ nhẹ (mô phỏng camera chất lượng thấp)
   noise_prob: 0.2                 # Thêm noise 20% ảnh
-  mosaic_prob: 0.5                # Mosaic augmentation (ghép 4 ảnh)
+  mosaic_prob: 1.0                # Mosaic augmentation (luôn ghép 4 ảnh để học bối cảnh phức tạp)
+  mixup_prob: 0.15                # Mixup augmentation (trộn 2 ảnh đè lên nhau)
+  scale: 0.5                      # Phóng to/thu nhỏ ảnh (±50%)
+  translate: 0.1                  # Dịch chuyển ảnh nhẹ (±10%)
 
 # --- Cấu hình SAHI (Slicing Aided Hyper Inference) ---
 # Chia ảnh lớn thành các patch nhỏ để phát hiện vật thể nhỏ/xa
@@ -152,6 +167,14 @@ output:
   save_predictions: true          # Lưu ảnh có bbox
   save_labels: true               # Lưu file labels dự đoán
   log_interval: 10                # In log mỗi N batch
+
+# --- Cấu hình WandB (Weights & Biases) ---
+# Dùng để theo dõi biểu đồ training online
+wandb:
+  enabled: true                   # Bật/Tắt WandB logging
+  project: "FireDetection_Early"  # Tên project trên WandB
+  entity: null                    # Username hoặc Team name trên WandB (để null nếu dùng cá nhân)
+  log_artifacts: true             # Có lưu lại model weights lên WandB không?
 
 # --- Cấu hình Evaluation ---
 evaluation:
