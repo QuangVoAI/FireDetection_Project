@@ -331,35 +331,51 @@ async def detect_image(
 
 def camera_stream_worker(url: str):
     """
-    Worker thread: đọc frame từ Camera IP → detect → ghi video nếu có lửa.
+    Worker thread: đọc frame từ Camera IP → detect → ghi video và cảnh báo đa kênh.
 
-    FLOW:
-        1. Mở stream (RTSP hoặc HTTP MJPEG)
-        2. Đọc frame liên tục
-        3. Mỗi 2 giây: chạy model detect
-        4. Nếu có lửa/khói → bắt đầu ghi video
-        5. Nếu hết lửa/khói (30s) → dừng ghi
+    NÂNG CẤP:
+        1. Sử dụng class VideoStream để chạy UDP FFMPEG ngầm không bị lag.
+        2. Tích hợp thuật toán cửa sổ trượt (sliding window) 3/5 frame chống báo giả.
+        3. Tích hợp AlertManager để tự động gọi Zalo/Telegram.
     """
     global camera_running, latest_frame, latest_detections
     global is_recording, video_writer, recording_filename, no_detection_counter
 
-    cap = cv2.VideoCapture(url)
-    if not cap.isOpened():
+    from src.utils.camera_stream import VideoStream
+    from src.utils.alert import AlertManager
+
+    logger.info(f"Khởi tạo luồng camera: {url}")
+    # Resize camera xuống 1280x720 hoặc 640x640 thay vì gốc 4K để tránh kẹt CPU
+    cam = VideoStream(url, resize_dim=(1280, 720)).start()
+    time_module.sleep(1.0)
+
+    if cam.stream is not None and getattr(cam, 'ret', False) is False:
         logger.error(f"❌ Không thể kết nối camera: {url}")
         camera_running = False
+        cam.stop()
         return
 
     logger.info(f"✅ Đã kết nối camera: {url}")
+    
+    alert_mgr = None
+    if config:
+        try:
+            alert_mgr = AlertManager(config)
+            # Ép ghi đè điều kiện 3 consecutive object của alert
+            alert_mgr.frames_threshold = 3 
+        except Exception as e:
+            logger.error(f"Không thể khởi tạo AlertManager: {e}")
+
+    # Thuật toán chống báo giả: Lưu true/false của 5 frame gần nhất
+    prediction_history = deque(maxlen=5)
+    
     frame_count = 0
-    detect_interval = 4  # Detect mỗi 4 frame (~2 giây với 2 FPS)
+    detect_interval = 2  # Detect mỗi 2 frame
 
     while camera_running:
-        ret, frame = cap.read()
-        if not ret:
-            logger.warning("⚠️ Mất kết nối camera, thử lại...")
-            time_module.sleep(2)
-            cap.release()
-            cap = cv2.VideoCapture(url)
+        ret, frame = cam.read()
+        if not ret or frame is None:
+            time_module.sleep(0.1)
             continue
 
         with frame_lock:
@@ -370,33 +386,40 @@ def camera_stream_worker(url: str):
         # Detect mỗi N frame
         if model is not None and frame_count % detect_interval == 0:
             try:
-                detections = model.predict(
-                    frame,
-                    conf_threshold=0.35
-                )
+                # 1. Chạy AI (Sử dụng config 0.35/0.25 tuỳ model)
+                detections = model.predict(frame, conf_threshold=0.30)
                 with frame_lock:
                     latest_detections = detections
 
-                # === Logic ghi video ===
                 has_fire_or_smoke = len(detections) > 0
+                
+                # 2. Lưu lịch sử
+                prediction_history.append(1 if has_fire_or_smoke else 0)
 
+                # Cửa sổ trượt: Có lửa >=3/5 frame mới xác nhận
+                is_confirmed_fire = sum(prediction_history) >= 3
+
+                # 3. Gửi cảnh báo
+                if alert_mgr:
+                    if is_confirmed_fire:
+                        alert_mgr.process_detections(frame, detections)
+                    else:
+                        alert_mgr.process_detections(frame, [])
+
+                # === Logic ghi video ===
                 if has_fire_or_smoke:
                     no_detection_counter = 0
 
                     if not is_recording:
-                        # Bắt đầu ghi video mới
                         start_recording(frame)
 
-                    # Ghi frame có detection
                     if is_recording and video_writer is not None:
-                        # Vẽ bbox lên frame trước khi ghi
                         from src.utils.visualization import draw_detections
                         annotated = draw_detections(frame, detections)
                         video_writer.write(annotated)
                 else:
                     if is_recording:
                         no_detection_counter += 1
-                        # Vẫn ghi thêm vài frame sau khi hết detect
                         if video_writer is not None:
                             video_writer.write(frame)
 
@@ -406,15 +429,11 @@ def camera_stream_worker(url: str):
             except Exception as e:
                 logger.error(f"Detect error: {e}")
 
-        # Nếu đang ghi mà frame không phải frame detect → vẫn ghi
-        elif is_recording and video_writer is not None:
-            video_writer.write(frame)
-
-        # Giới hạn FPS (~2 FPS để không quá tải)
-        time_module.sleep(0.5)
+        # Worker loop không bị block bởi I/O mạng nữa, sleep 0.05 để nhả CPU
+        time_module.sleep(0.05)
 
     # Cleanup
-    cap.release()
+    cam.stop()
     if is_recording:
         stop_recording()
     logger.info("📷 Camera stream stopped")

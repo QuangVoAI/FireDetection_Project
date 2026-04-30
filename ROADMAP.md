@@ -11,10 +11,10 @@ Tài liệu này hệ thống lại quy trình thực hiện đồ án, tập tr
 * **Quản trị Data trên Roboflow:** Sử dụng duy nhất 1 Project (`FireDetection_Master`), dùng tính năng **Tags** (vd: `01_positive_standard`) để phân loại ảnh rạch ròi.
 * **Phân bổ cấu trúc 5 lớp dữ liệu (Curriculum Learning):**
   1. `01_Positive_Standard` **(12.000 ảnh / 41%):** Ảnh lửa bùng phát, khói rõ ràng. Đây là lớp nền tảng để model học hình khối/màu sắc cơ bản của ngọn lửa/khói. *(✅ Đã hoàn thành — gấp 1.6x mục tiêu ban đầu 7.500).*
-  2. `02_Alley_Context` **(~5.000 ảnh / 17%):** Bối cảnh thực tế nhà cửa, dây điện chằng chịt, hẻm nhỏ hẹp đặc thù tại TP.HCM. Giúp model làm quen không gian đô thị phức tạp.
+  2. `02_Alley_Context` **(~7.000 ảnh / 17%):** Bối cảnh thực tế nhà cửa, dây điện chằng chịt, hẻm nhỏ hẹp đặc thù tại TP.HCM. Giúp model làm quen không gian đô thị phức tạp.
   3. `03_Negative_Hard_Samples` **(~5.500 ảnh / 19%):** Ánh đèn Neon đỏ, sương mù, khói bún bò xe hủ tiếu, đèn hậu xe máy. *Lưu ý: Không vẽ nhãn Polygon nào ở tập này.* Nhằm trừng phạt hàm Loss, triệt tiêu hoàn toàn khả năng báo động giả (False Positive). *(⬆️ Tăng từ 3.500 → 5.500 để cân đối tỷ lệ negative/positive khi 01 tăng lên 12K).*
   4. `04_SAHI_Small_Objects` **(~5.000 ảnh / 17%):** Đốm lửa/khói cực kỳ nhỏ bé, chụp từ góc cao hoặc flycam. Lớp dữ liệu bản lề giúp mô hình phát huy sức mạnh Cảnh Báo Sớm (Early Warning) khi kết hợp cùng công nghệ SAHI.
-  5. `05_Real_Situation` **(~2.000 ảnh / 6%):** Hiện trường thực chiến ban đêm, khói mịt mù, vòi rồng cứu hỏa, nước phun, lính cứu hỏa. Bài Test khắt khe nhất để kiểm chứng tính chống chịu (Robustness).
+  5. `05_Ambient_Context_Null` **(~2.000 ảnh / 6%):** Bối cảnh rừng núi, nhà cửa, đường phố lúc bình thường (không có lửa). Giúp model hiểu rõ "trạng thái an toàn" để giảm tối đa báo động giả.
 * **Tracking tự động:** Đã tích hợp API Github Actions & Roboflow (`roboflow_metrics_tracker.py`) để theo dõi tiến độ gán nhãn hàng ngày, tự động nhắc nhở tiến độ qua Discord.
 
 ---

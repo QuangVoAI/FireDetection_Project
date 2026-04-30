@@ -144,7 +144,7 @@ TƯƠNG TỰ: Giống sách giáo khoa chia theo chương:
   Chương 2: Bài tập thực tế (02_Alley_Context)
   Chương 3: Bài tập khó (03_Negative_Hard_Samples)
   Chương 4: Bài nâng cao (04_SAHI_Small_Objects)
-  Chương 5: Đề thi thực (05_Real_Situation)
+  Chương 5: Trạng thái an toàn (05_Ambient_Context_Null)
 ```
 
 ````carousel
@@ -181,12 +181,12 @@ Mục đích: Model phát hiện lửa DÙ RẤT NHỎ
 Dùng ở: Stage 3 (SAHI)
 ```
 <!-- slide -->
-**📁 05_Real_Situation** — Thực tế tin tức
+**📁 05_Ambient_Context_Null** — Bối cảnh bình thường (không cháy)
 ```
-Nguồn: VTV, VnExpress, Tuổi Trẻ
-Nội dung: Ảnh cháy thật tại TPHCM
-Mục đích: Model xử lý TÌNH HUỐNG THẬT
-Dùng ở: Stage 3 (SAHI)
+Nguồn: Đường phố/nhà cửa/rừng núi bình thường, camera giám sát không cháy
+Nội dung: Không có lửa/khói
+Mục đích: Giảm false positive, giúp model hiểu "không cháy" trông như thế nào
+Dùng ở: Stage 3 (SAHI + Ambient Null)
 ```
 ````
 

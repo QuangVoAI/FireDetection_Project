@@ -18,8 +18,8 @@ data/
 ├── 04_SAHI_Small_Objects/
 │   ├── images/     ← Ảnh vật thể nhỏ/xa
 │   └── labels/
-└── 05_Real_Situation/
-    ├── images/     ← Ảnh thực tế từ tin tức
+└── 05_Ambient_Context_Null/
+    ├── images/     ← Ảnh bối cảnh bình thường (không có lửa/khói)
     └── labels/
 ```
 
@@ -46,7 +46,7 @@ Mỗi ảnh có 1 file `.txt` cùng tên trong thư mục `labels/`:
 | `02_Alley_Context` | Tự chụp/quay tại hẻm TPHCM, Google Street View |
 | `03_Negative_Hard_Samples` | Tự chụp: quán phở, xe máy ban đêm, đèn LED đỏ |
 | `04_SAHI_Small_Objects` | Crop/augment từ folder 01, camera ban công |
-| `05_Real_Situation` | VTV, VnExpress, Tuổi Trẻ (ảnh tin tức cháy) |
+| `05_Ambient_Context_Null` | Rừng núi/đường phố/nhà cửa bình thường (không có lửa/khói) |
 
 ## Tool gán nhãn (Annotation)
 

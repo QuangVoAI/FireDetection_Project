@@ -7,7 +7,7 @@ Raw data collection (5 thư mục):
 02_Alley_Context: Bối cảnh thực tế nhà cửa, hẻm nhỏ đặc thù tại TP.HCM (Quận 7, Quận 4, Tân Bình...).
 03_Negative_Hard_Samples: Các vật thể gây nhiễu (Khói hủ tiếu, hơi nước, đèn hậu xe máy, biển hiệu LED đỏ, quần áo đỏ).
 04_SAHI_Small_Objects: Vật thể chi tiết nhỏ, ở xa hoặc chụp từ ban công cao nhìn xuống sâu trong hẻm. ( https://www.youtube.com/watch?v=kHQqYWp3Wqw )
-05_Real_Situation: Hình ảnh hiện trường cháy thực tế từ báo đài (VTV, VnExpress) để tăng tính thực tế.
+05_Ambient_Context_Null: Bối cảnh bình thường (rừng núi/đường phố/nhà cửa) không có lửa/khói để giảm false positive.
 Gán nhãn (Annotation):
 Công cụ: Roboflow hoặc LabelImg.
 Nhãn lớp: Fire (Lửa) và Smoke (Khói).

@@ -58,7 +58,7 @@ class Trainer:
            - Output: best.pt mới
 
         3. run_sahi_finetuning():
-           - Data: 04_SAHI_Small_Objects + 05_Real_Situation
+           - Data: 04_SAHI_Small_Objects + 05_Ambient_Context_Null
            - Load weights từ Stage 2
            - Mục tiêu: phát hiện lửa/khói nhỏ/xa
            - Output: best.pt cuối cùng (deploy)
@@ -245,7 +245,7 @@ class Trainer:
 
         DATA:
             - 04_SAHI_Small_Objects: Ảnh vật thể nhỏ (crop từ balcony cam)
-            - 05_Real_Situation: Ảnh thực tế từ tin tức (VTV, VnExpress)
+            - 05_Ambient_Context_Null: Ảnh bối cảnh bình thường (không có lửa/khói)
 
         THAM SỐ:
             - Learning rate: 2e-5 (rất nhỏ, tinh chỉnh cuối)

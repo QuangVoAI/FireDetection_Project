@@ -13,7 +13,7 @@ FireDetection_Project/
 │   ├── 02_Alley_Context/       ← Cảnh hẻm TPHCM
 │   ├── 03_Negative_Hard_Samples/ ← Mẫu âm tính khó
 │   ├── 04_SAHI_Small_Objects/  ← Vật thể nhỏ/xa
-│   └── 05_Real_Situation/      ← Ảnh thực tế
+│   └── 05_Ambient_Context_Null/ ← Bối cảnh bình thường (không có lửa/khói)
 ├── src/
 │   ├── config.py               ← Config loader (dot-notation)
 │   ├── data/

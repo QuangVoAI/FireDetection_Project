@@ -39,8 +39,8 @@ tickets = [
         "labels": ["epic-1-data", "todo"]
     },
     {
-        "title": "🎫 [GĐ 1] Data - Real Situation (Tập Kiểm định Thực Tế CCTV)",
-        "body": "### 🎯 KPI (TẬP ĐÁNH GIÁ THESIS): 1,000 Ảnh\n- **Thư mục:** `data/05_Real_Situation`\n- **Nhiệm vụ:** Giữ bí mật 100% (Không dùng Train). Dùng để Test xem mô hình có ảo tưởng không.\n- **Hành động:** Lên báo VnExpress, Tuổi Trẻ, VTV cắt ảnh Camera an ninh (CCTV) mờ nhòe bão hạt của các vụ cháy thật ở quán Karaoke, nhà dân trong đêm.",
+        "title": "🎫 [GĐ 1] Data - Ambient Context Null (Tập âm tính bối cảnh bình thường)",
+        "body": "### 🎯 KPI (Giảm False Positive): 1,000–2,000 Ảnh\n- **Thư mục:** `data/05_Ambient_Context_Null`\n- **Nhiệm vụ:** Thu thập bối cảnh KHÔNG có lửa/khói (rừng núi/đường phố/nhà cửa bình thường) để model hiểu rõ 'trạng thái an toàn'.\n- **Hành động:** Tải ảnh cảnh quan, đường phố ban đêm, camera hẻm bình thường; **không khoanh box nào** (label file rỗng).",
         "labels": ["epic-1-data", "todo"]
     },
     

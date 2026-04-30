@@ -257,14 +257,15 @@ class FireDetectionModel:
                 cls_id = int(box.cls.item())
                 conf = float(box.conf.item())
                 xyxy = box.xyxy[0].cpu().numpy()  # [x1, y1, x2, y2]
+                x1, y1, x2, y2 = [float(x) for x in xyxy.tolist()]
 
                 # Tính normalized bbox (YOLO format)
                 if result.orig_shape:
                     img_h, img_w = result.orig_shape
-                    cx = ((xyxy[0] + xyxy[2]) / 2) / img_w
-                    cy = ((xyxy[1] + xyxy[3]) / 2) / img_h
-                    w = (xyxy[2] - xyxy[0]) / img_w
-                    h = (xyxy[3] - xyxy[1]) / img_h
+                    cx = ((x1 + x2) / 2) / img_w
+                    cy = ((y1 + y2) / 2) / img_h
+                    w = (x2 - x1) / img_w
+                    h = (y2 - y1) / img_h
                 else:
                     cx = cy = w = h = 0.0
 
@@ -272,7 +273,13 @@ class FireDetectionModel:
                     'class_id': cls_id,
                     'class_name': self.class_names[cls_id] if cls_id < len(self.class_names) else f"class_{cls_id}",
                     'confidence': round(conf, 4),
-                    'bbox': [float(x) for x in xyxy],
+                    # Canonical bbox format used throughout backend
+                    'bbox': [x1, y1, x2, y2],
+                    # Convenience fields for web UI (some frontends expect xmin/ymin/xmax/ymax)
+                    'xmin': x1,
+                    'ymin': y1,
+                    'xmax': x2,
+                    'ymax': y2,
                     'bbox_normalized': [float(cx), float(cy), float(w), float(h)],
                 })
 
@@ -344,12 +351,17 @@ class FireDetectionModel:
             bbox = pred.bbox  # SAHI BoundingBox object
             cls_id = pred.category.id
             conf = pred.score.value
+            x1, y1, x2, y2 = float(bbox.minx), float(bbox.miny), float(bbox.maxx), float(bbox.maxy)
 
             detections.append({
                 'class_id': cls_id,
                 'class_name': self.class_names[cls_id] if cls_id < len(self.class_names) else f"class_{cls_id}",
                 'confidence': round(conf, 4),
-                'bbox': [bbox.minx, bbox.miny, bbox.maxx, bbox.maxy],
+                'bbox': [x1, y1, x2, y2],
+                'xmin': x1,
+                'ymin': y1,
+                'xmax': x2,
+                'ymax': y2,
                 'bbox_normalized': [],  # SAHI trả về pixel coords
             })
 

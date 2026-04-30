@@ -163,7 +163,17 @@ function drawBoxes(detections) {
     const vh = video.videoHeight || 480;
 
     detections.forEach(d => {
-        const { xmin, ymin, xmax, ymax, class_name, confidence } = d;
+        // Support both backend shapes:
+        // - { xmin, ymin, xmax, ymax, class_name, confidence }
+        // - { bbox: [x1,y1,x2,y2], class_name, confidence }
+        const class_name = d.class_name;
+        const confidence = d.confidence;
+
+        const xmin = (typeof d.xmin === 'number') ? d.xmin : (Array.isArray(d.bbox) ? d.bbox[0] : 0);
+        const ymin = (typeof d.ymin === 'number') ? d.ymin : (Array.isArray(d.bbox) ? d.bbox[1] : 0);
+        const xmax = (typeof d.xmax === 'number') ? d.xmax : (Array.isArray(d.bbox) ? d.bbox[2] : 0);
+        const ymax = (typeof d.ymax === 'number') ? d.ymax : (Array.isArray(d.bbox) ? d.bbox[3] : 0);
+
         const width = xmax - xmin;
         const height = ymax - ymin;
         
